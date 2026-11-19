@@ -23,6 +23,10 @@ SIZES = {
     "cloud-band": 1200,
     "peach-branch": 900,
     "lotus-pond": 1200,
+    "envelope-back": 1920,
+    "env-foil": 1440,
+    "env-inside": 1280,
+    "seal-red": 600,
 }
 DEFAULT = 1200
 QUALITY = 80

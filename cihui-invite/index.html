@@ -42,17 +42,30 @@
     <div class="bird"><i class="carried"></i></div>
   </div>
 
+  <!-- the letter: once the bird lets go, it flies at you and fills the screen -->
   <div id="letter" class="letter">
-    <div class="letter-paper">
-      <p class="l-to-label">敬呈</p>
-      <div class="l-frame"><span id="letter-to" class="l-to"></span><span class="l-sealed" data-t="sealed"></span></div>
-      <p class="l-from" data-t="from"></p>
+    <div class="env-box" aria-hidden="true">
+      <div class="env-inside"></div>
+      <div class="flap fl-left"><i class="sheet"></i><i class="foil"></i></div>
+      <div class="flap fl-right"><i class="sheet"></i><i class="foil"></i></div>
+      <div class="flap fl-bottom"><i class="sheet"></i><i class="foil"></i></div>
+      <div class="top-shadow"></div>
+      <div class="flap-top">
+        <i class="face front"><i class="sheet"></i><i class="foil"></i></i>
+        <i class="face back"></i>
+      </div>
+      <svg class="seams" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0 L50 50 L100 0 M0 100 L50 50 L100 100"/></svg>
+      <svg class="seams glowing" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 100 L50 50 L100 100 M0 0 L50 50 L100 0"/></svg>
+      <div class="light"><i class="wave"></i><i class="warm"></i><i class="beams"></i><i class="core"></i></div>
     </div>
-    <i class="l-glow" aria-hidden="true"></i>
-    <i class="l-flap" aria-hidden="true"></i>
+    <!-- the name, on a label pasted below the seal -->
+    <div class="slip"><span id="letter-to" class="l-to"></span><span class="l-sealed" data-t="sealed"></span></div>
     <span class="seal" aria-hidden="true"><b>慈</b>
 <b>惠</b></span>
   </div>
+
+  <!-- a bluebird flies out of the light -->
+  <div class="bird-out" aria-hidden="true"><div class="bird"></div></div>
 
   <p class="tap"><span data-t="tapToOpen"></span></p>
   <i class="burst" aria-hidden="true"></i>

@@ -10,9 +10,10 @@
   const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
   const DIGIT = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
   const MAPS = 'https://www.google.com/maps/search/?api=1&query=';
-  const ART = ['heaven', 'letter', 'yaochi', 'cloud-band', 'peach-branch', 'lotus-pond'];
-  const DELIVERY_MS = 5200; // the bluebird has brought the letter: must match the letter's landing in style.css
-  const OPEN_MS = 3000; // the golden light has faded: must match the .sky hide delay in style.css
+  const ART = ['heaven', 'envelope-back', 'env-foil', 'env-inside', 'seal-red', 'yaochi', 'cloud-band', 'peach-branch',
+    'lotus-pond'];
+  const DELIVERY_MS = 4800; // the letter has flown at you and fills the screen: must match its arrival in style.css
+  const OPEN_MS = 5200; // the golden light has faded: must match the .sky hide delay in style.css
 
   const state = { content: null, guest: '', timer: 0, wantsOpen: false };
 

@@ -45,6 +45,17 @@ test('1. a bluebird flies in carrying the letter; the letter lands, sealed with 
   }
 });
 
+test('1. the letter is a full envelope with four flaps, and the name sits on a label pasted on it', withDom('?to=' + encodeURIComponent('林小美師姐'), undefined, (win, doc) => {
+  for (const sel of ['.flap-top', '.fl-left', '.fl-right', '.fl-bottom']) {
+    assert.ok(doc.querySelector(`#letter ${sel}`), `the envelope has ${sel}`);
+  }
+  assert.equal(text(doc, '#letter .slip #letter-to'), '林小美師姐');
+}));
+
+test('2. when the letter opens, a bluebird flies out of the light', withDom('', undefined, (win, doc) => {
+  assert.ok(doc.querySelector('#sky .bird-out'));
+}));
+
 test('1. once landed, clicking, Enter or Space opens the letter', async () => {
   for (const how of ['click', 'Enter', ' ']) {
     const { dom, doc } = await delivered();
