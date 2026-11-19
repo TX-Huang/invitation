@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Isaac &amp; Dodo · Wedding</title>
+<meta name="theme-color" content="#5A1828">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Noto+Serif+TC:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+<!-- the same words, date and venue as the first card: edit ../idodo-invite/content.js and every card changes -->
+<script src="../idodo-invite/content.js"></script>
+<script src="app.js" defer></script>
+</head>
+<body class="sealed">
+
+<!-- host only: personal link maker (?host) -->
+<section id="host" class="host" hidden>
+  <h2 data-t="hostTitle"></h2>
+  <p class="host-lead" data-t="hostLead"></p>
+  <textarea id="host-names" rows="5"></textarea>
+  <div class="host-row">
+    <button type="button" id="host-make" data-t="hostMake"></button>
+    <button type="button" id="host-copy-all" class="ghost" data-t="hostCopyAll"></button>
+  </div>
+  <ul id="host-links"></ul>
+  <p class="host-note" data-t="hostNote"></p>
+</section>
+
+<!-- language + music -->
+<div class="lang" role="group" aria-label="Language">
+  <button type="button" data-lang="zh" aria-pressed="true">中</button>
+  <button type="button" data-lang="en" aria-pressed="false">EN</button>
+</div>
+<button type="button" id="music" class="music" hidden aria-pressed="false">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>
+  <span class="sr" data-t="music"></span>
+</button>
+<audio id="audio" loop preload="none"></audio>
+
+<!-- the envelope: embossed burgundy paper, gold-foil roses, a wax seal -->
+<div id="envelope" class="envelope" role="button" tabindex="0">
+  <div class="env-box" aria-hidden="true">
+    <div class="env-inside"><i class="glow"></i></div>
+    <div class="flap fl-left"><i class="paper"></i><i class="foil"></i></div>
+    <div class="flap fl-right"><i class="paper"></i><i class="foil"></i></div>
+    <div class="flap fl-bottom"><i class="paper"></i><i class="foil"></i></div>
+    <div class="top-shadow"></div>
+    <div class="flap-top">
+      <i class="face front"><i class="paper"></i><i class="foil"></i></i>
+      <i class="face back"></i>
+    </div>
+    <svg class="seams" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0 L50 52 L100 0 M0 100 L50 48 L100 100"/></svg>
+    <div class="burst"></div>
+  </div>
+  <div id="seal" class="seal"><span class="mono">I<i>&amp;</i>D</span></div>
+  <p class="tap"><span data-t="tapToOpen"></span></p>
+</div>
+
+<main id="main" class="page" tabindex="-1">
+
+  <!-- the card -->
+  <section class="card">
+    <div class="card-box">
+      <div class="card-art" aria-hidden="true"></div>
+      <div class="card-text">
+        <p class="wd" data-t="weddingDay"></p>
+        <p id="card-date" class="card-date"></p>
+        <h1 class="names"><span>Isaac</span><span class="amp">&amp;</span><span>Dodo</span></h1>
+        <a class="scroll-hint" href="#invite"><span data-t="scroll"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- invitation -->
+  <section id="invite" class="invite">
+    <div class="swans" aria-hidden="true" data-reveal></div>
+    <p class="script-title" data-reveal>Isaac &amp; Dodo</p>
+    <p class="warmly" data-t="warmly" data-reveal></p>
+    <p id="greeting" class="greeting" data-reveal></p>
+    <p class="invite-line" data-t="eyebrow" data-reveal></p>
+  </section>
+
+  <!-- countdown -->
+  <section class="countdown torn">
+    <h2 class="script-title" data-t="countdownTitle3" data-reveal></h2>
+    <p id="countdown-sub" class="subtitle" data-reveal></p>
+    <div id="countdown-clock" class="clock" hidden data-reveal>
+      <p><span id="cd-days">0</span><small data-t="days"></small></p><b aria-hidden="true">:</b>
+      <p><span id="cd-hours">00</span><small data-t="hours"></small></p><b aria-hidden="true">:</b>
+      <p><span id="cd-minutes">00</span><small data-t="minutes"></small></p><b aria-hidden="true">:</b>
+      <p><span id="cd-seconds">00</span><small data-t="seconds"></small></p>
+    </div>
+    <p id="countdown-note" class="countdown-note" hidden data-reveal></p>
+  </section>
+
+  <!-- schedule: a rose travels down the line as you scroll -->
+  <section id="schedule" class="schedule torn">
+    <h2 class="script-title flourish" data-t="scheduleTitle" data-reveal></h2>
+    <p id="day-sub" class="subtitle" data-reveal></p>
+    <div class="tl-wrap">
+      <ol id="timeline" class="timeline"></ol>
+      <i class="rose-marker" aria-hidden="true"></i>
+    </div>
+  </section>
+
+  <!-- location -->
+  <section class="location torn">
+    <h2 class="script-title" data-t="locationTitle" data-reveal></h2>
+    <p id="venue-name" class="venue-name" data-reveal></p>
+    <p id="venue-when" class="venue-when" data-reveal></p>
+    <p id="venue-address" class="venue-address" data-reveal></p>
+    <div class="venue-art" aria-hidden="true" data-reveal></div>
+    <a id="map-link" class="map-btn" target="_blank" rel="noopener" data-t="map" hidden></a>
+  </section>
+
+  <!-- story -->
+  <section class="story torn">
+    <h2 class="script-title" data-t="storyTitle" data-reveal></h2>
+    <div id="story-text" class="story-text" data-reveal></div>
+  </section>
+
+  <!-- footer -->
+  <footer class="foot torn">
+    <i class="corner left" aria-hidden="true"></i><i class="corner right" aria-hidden="true"></i>
+    <p class="script-title" data-t="hope" data-reveal></p>
+    <p class="foot-names" data-reveal>Isaac &amp; Dodo</p>
+    <p class="hashtag" data-reveal>#IDoDodo</p>
+  </footer>
+</main>
+
+</body>
+</html>

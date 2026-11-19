@@ -14,7 +14,8 @@ export default [
   },
   {
     // Page scripts load as classic <script> tags in the browser.
-    files: ['*-invite/**/*.js'],
+    // Card folders: xxxx-invite/, and later editions such as xxxx-invite-2/.
+    files: ['*-invite/**/*.js', '*-invite-*/**/*.js'],
     languageOptions: { ecmaVersion: 2022, sourceType: 'script', globals: { ...globals.browser } },
   },
   {

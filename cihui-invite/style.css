@@ -1,0 +1,599 @@
+/* 慈惠道場 堂慶 — a bluebird brings the letter; golden light; a hanging scroll on the Jade Pool */
+
+:root {
+  --paper: #ECE8E3;
+  --paper-hi: #F6F3EE;
+  --paper-lo: #E2DCD4;
+  --ink: #2F2A25;
+  --soft: rgba(47, 42, 37, .62);
+  --line: #D3C6B2;
+  --gold: #A8844A;
+  --gold-hi: #D9BF8A;
+  --celadon: #6F9A92;
+  --cinnabar: #A8383A;
+  --serif: 'Noto Serif TC', 'Songti TC', serif;
+  --kai: 'LXGW WenKai TC', 'Noto Serif TC', serif;
+  --brush: 'Yuji Boku', 'Noto Serif TC', serif;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --col: 480px;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .26 0 0 0 0 .2 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: #D8D1C8 var(--grain);
+  color: var(--ink);
+  font-family: var(--kai);
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+/* nothing scrolls until the scroll is unrolled */
+body:not(.revealed) { overflow: hidden; height: 100svh; }
+h1, h2, h3, p { margin: 0; }
+button { font: inherit; color: inherit; }
+
+.page {
+  position: relative;
+  max-width: var(--col);
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--paper) var(--grain);
+  box-shadow: 0 0 70px rgba(60, 50, 40, .18);
+  outline: none;
+}
+section, .foot { position: relative; padding: 60px 28px; text-align: center; }
+
+.title { font-family: var(--serif); font-weight: 600; font-size: 22px; letter-spacing: .5em; padding-left: .5em; color: var(--ink); }
+
+/* a band of gold auspicious clouds between sections */
+.cloud-band {
+  height: 26px;
+  margin: 0 auto 22px;
+  width: 70%;
+  background:
+    radial-gradient(circle at 50% 50%, var(--gold) 0 3px, transparent 3.5px) center / 18px 26px no-repeat,
+    linear-gradient(var(--gold-hi), var(--gold-hi)) center / 100% 1px no-repeat;
+}
+.art-cloud-band .cloud-band { height: auto; aspect-ratio: 6 / 1; background: url("art/cloud-band.webp") center / contain no-repeat; }
+
+/* ---------- the sky ----------
+ * On load (body.sealed):
+ *   0.30–1.30  the dojo's name fades in over the sea of clouds
+ *   0.80–5.40  the bluebird flies in from far away with the letter in its beak, lets go in front of you
+ *              (about 3.6 s) and flies off; the letter drifts down and settles (3.60–5.20; app.js DELIVERY_MS)
+ * After a tap (body.opened):
+ *   0.00–0.60  the cinnabar seal lifts away
+ *   0.35–1.25  the flap folds open
+ *   0.70–2.20  golden light pours out of the letter and the rays brighten
+ *   1.60–2.40  the light fills the sky
+ *   2.40–3.00  the sky fades onto the hanging scroll (app.js OPEN_MS = 3000)
+ */
+.sky {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  max-width: var(--col);
+  margin: 0 auto;
+  overflow: hidden;
+  container-type: size;
+  cursor: pointer;
+  outline: none;
+  background: #E6E3E0;
+  transition: opacity .6s ease 2.4s, visibility 0s linear 3s;
+}
+.opened .sky { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.sky-box, .hero-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100cqw, 100cqh * 9 / 16);
+  aspect-ratio: 9 / 16;
+  transform: translate(-50%, -50%);
+}
+.sky-art { position: absolute; inset: 0; background: url("art/sky.webp") center / cover no-repeat; }
+.art-heaven .sky-art { background-image: url("art/heaven.webp"); }
+.rays {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  top: -12%;
+  height: 70%;
+  background: url("art/rays.webp") center top / contain no-repeat;
+  mix-blend-mode: screen;
+  opacity: .45;
+  transform-origin: 50% 0;
+  animation: sway-rays 14s ease-in-out infinite alternate;
+  transition: opacity 1.2s ease .8s;
+}
+.opened .rays { opacity: 1; }
+@keyframes sway-rays { to { transform: rotate(4deg); } }
+
+.cloud {
+  position: absolute;
+  left: -20%;
+  width: 140%;
+  aspect-ratio: 3 / 2;
+  pointer-events: none;
+  background: center / contain no-repeat;
+  /* soften the cut edges of the cloud pictures */
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%, #000 62%, transparent 86%);
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 62%, transparent 86%);
+}
+.c1 { bottom: -14%; background-image: url("art/clouds.webp"); opacity: .9; animation: drift 38s ease-in-out infinite alternate; }
+.c2 { top: 34%; background-image: url("art/clouds-2.webp"); opacity: .55; animation: drift 46s ease-in-out infinite alternate-reverse; }
+.c3 { bottom: -12%; background-image: url("art/clouds.webp"); opacity: .8; animation: drift 40s ease-in-out infinite alternate; }
+@keyframes drift { from { translate: -6% 0; } to { translate: 6% 0; } }
+
+.sky-title {
+  position: absolute;
+  z-index: 2;
+  top: calc(8% + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  opacity: 0;
+  animation: fade-in 1s ease .3s forwards;
+}
+.sky-title span:first-child { font-family: var(--kai); font-size: 14px; letter-spacing: .6em; padding-left: .6em; color: var(--gold); }
+.sky-title span:last-child { font-family: var(--brush); font-size: 38px; letter-spacing: .3em; padding-left: .3em; }
+.opened .sky-title { opacity: 0; transition: opacity .5s ease; animation: none; }
+
+/* the bluebird: a 6 × 6 sheet of wing beats, 24 frames a second */
+.courier {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 40%;
+  width: min(48cqw, 220px);
+  opacity: 0;
+  animation: fly 4.6s linear .8s forwards;
+  pointer-events: none;
+}
+@keyframes fly {
+  0% { transform: translate(-50%, -50%) translate(-95cqw, -24cqh) scale(.26); opacity: 0; animation-timing-function: cubic-bezier(.2, .4, .4, 1); }
+  10% { opacity: 1; }
+  60% { transform: translate(-50%, -50%) translate(-4cqw, 0) scale(1); opacity: 1; animation-timing-function: cubic-bezier(.5, 0, .8, .6); }
+  100% { transform: translate(-50%, -50%) translate(80cqw, -42cqh) scale(.4); opacity: 0; }
+}
+.bird {
+  position: relative;
+  aspect-ratio: 300 / 204;
+  background: url("art/bluebird.webp") 0 0 / 600% 600% no-repeat;
+  animation: flap-x .25s steps(6) infinite, flap-y 1.5s steps(6) infinite, bob 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 6px 8px rgba(60, 70, 80, .18));
+}
+@keyframes flap-x { to { background-position-x: 120%; } }
+@keyframes flap-y { to { background-position-y: 120%; } }
+@keyframes bob { 50% { translate: 0 -5%; } }
+/* the letter, small, held in the beak until the bird lets go */
+.carried {
+  position: absolute;
+  left: 86%;
+  top: 48%;
+  width: 11%;
+  aspect-ratio: 470 / 1424;
+  transform-origin: 50% 0;
+  background:
+    linear-gradient(var(--cinnabar), var(--cinnabar)) 50% 55% / 30% 60% no-repeat,
+    linear-gradient(var(--paper-hi), var(--paper-hi)) 50% 55% / 26% 56% no-repeat,
+    linear-gradient(170deg, #FBF8F2, #EDE6DA);
+  box-shadow: 0 2px 4px rgba(60, 50, 40, .25);
+  animation: dangle 1.5s ease-in-out infinite alternate, let-go 0s linear 3.6s forwards;
+}
+.art-letter .carried { background: url("art/letter.webp") center / 100% 100% no-repeat; }
+@keyframes dangle { from { rotate: -6deg; } to { rotate: 10deg; } }
+@keyframes let-go { to { visibility: hidden; } }
+
+/* the letter */
+.letter {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 52%;
+  height: min(64cqh, 540px);
+  aspect-ratio: 470 / 1424;
+  perspective: 900px;
+  opacity: 0;
+  animation: drift-down 1.6s cubic-bezier(.3, .1, .3, 1) 3.6s forwards;
+}
+@keyframes drift-down {
+  0% { opacity: 1; transform: translate(-50%, -50%) translate(12cqw, -15cqh) scale(.16) rotate(10deg); }
+  35% { opacity: 1; transform: translate(-50%, -50%) translate(5cqw, -7cqh) scale(.55) rotate(-7deg); }
+  70% { opacity: 1; transform: translate(-50%, -50%) translate(-2cqw, 1cqh) scale(.9) rotate(4deg); }
+  100% { opacity: 1; transform: translate(-50%, -50%); }
+}
+.letter-paper {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  /* stand-in: ivory paper with a scatter of gold leaf */
+  background:
+    radial-gradient(circle at 20% 30%, rgba(201, 164, 98, .5) 0 1px, transparent 1.5px) 0 0 / 23px 31px,
+    radial-gradient(circle at 70% 60%, rgba(201, 164, 98, .4) 0 1px, transparent 1.5px) 0 0 / 29px 37px,
+    linear-gradient(170deg, #FBF8F2, #EFE8DC 70%, #E8E0D2);
+  box-shadow: 0 18px 36px rgba(60, 50, 40, .25), 0 2px 6px rgba(60, 50, 40, .18);
+}
+.art-letter .letter-paper { background: url("art/letter.webp") center / 100% 100% no-repeat; }
+.art-letter .l-frame { left: 30%; right: 30%; top: 20%; bottom: 19%; border: 0; outline: 0; }
+.art-letter .l-to-label { right: 19%; top: 20%; }
+.art-letter .l-from { left: 19%; bottom: 19%; }
+/* the flap is the top of the same painting, so it folds back seamlessly */
+.art-letter .l-flap { background: url("art/letter.webp") center top / 100% 833% no-repeat; box-shadow: 0 2px 3px rgba(60, 50, 40, .1); }
+/* vertical writing, read top to bottom, right to left */
+.l-frame, .l-to-label, .l-from { position: absolute; writing-mode: vertical-rl; font-family: var(--kai); color: var(--ink); }
+.l-frame {
+  left: 34%;
+  right: 34%;
+  top: 19%;
+  bottom: 14%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12% 0 10%;
+  border: 1.5px solid var(--cinnabar);
+  outline: 1px solid rgba(168, 56, 58, .45);
+  outline-offset: 3px;
+}
+.l-to { font-size: min(6.4cqw, 27px); letter-spacing: .16em; line-height: 1; }
+.l-sealed { font-size: min(3.6cqw, 15px); letter-spacing: .3em; color: var(--soft); }
+.l-to-label { right: 15%; top: 21%; font-size: min(3.4cqw, 14px); letter-spacing: .3em; color: var(--soft); }
+.l-from { left: 15%; bottom: 15%; font-size: min(3.4cqw, 14px); letter-spacing: .2em; color: var(--soft); }
+
+/* the flap along the top, and the light inside it */
+.l-flap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 12%;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #F7F2E9, #ECE4D6);
+  box-shadow: 0 2px 3px rgba(60, 50, 40, .12);
+  transform-origin: 50% 0;
+  transition: transform .9s cubic-bezier(.45, 0, .3, 1) .35s, opacity .3s ease 1s;
+}
+.opened .l-flap { transform: rotateX(-170deg); opacity: 0; }
+.l-glow {
+  position: absolute;
+  left: -40%;
+  right: -40%;
+  top: -30%;
+  height: 80%;
+  background: radial-gradient(50% 40% at 50% 40%, #FFFBEE 0%, #FFE6AE 35%, rgba(255, 214, 140, .45) 60%, transparent 78%);
+  opacity: 0;
+  transform: scale(.3);
+  transform-origin: 50% 40%;
+  transition: opacity 1s ease .7s, transform 1.5s cubic-bezier(.3, 0, .2, 1) .7s;
+  pointer-events: none;
+}
+.opened .l-glow { opacity: 1; transform: scale(2.8); }
+
+/* the cinnabar seal across the flap */
+.seal {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 12%;
+  width: 19%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  border-radius: 3px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .12), transparent 60%),
+    var(--cinnabar);
+  box-shadow: 0 2px 4px rgba(80, 20, 20, .3), inset 0 0 0 2px rgba(255, 240, 230, .35);
+  color: #FBEFE6;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: min(4cqw, 17px);
+  line-height: 1.05;
+}
+.seal b { font-weight: 900; }
+.opened .seal { animation: seal-off .6s cubic-bezier(.4, 0, .2, 1) forwards; }
+@keyframes seal-off {
+  40% { transform: translate(-50%, -62%) scale(1.08); opacity: 1; }
+  100% { transform: translate(-50%, -90%) scale(1.2); opacity: 0; filter: blur(2px); }
+}
+
+/* tap hint, once the letter has landed */
+.tap {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: calc(52% + min(32cqh, 270px) + 16px);
+  text-align: center;
+  opacity: 0;
+  transition: opacity .8s ease .2s;
+  pointer-events: none;
+}
+.landed .tap { opacity: 1; }
+.opened .tap { opacity: 0; transition: opacity .25s ease; }
+.tap span {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-left: .5em;
+  font-size: 14px;
+  letter-spacing: .5em;
+  color: var(--ink);
+}
+.tap span::before {
+  content: "";
+  width: 26px;
+  height: 26px;
+  margin-left: -.5em;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  animation: ripple 2.6s ease-out infinite;
+}
+.sky:focus-visible .tap span::before { border-width: 2px; }
+@keyframes ripple { 0% { scale: .55; opacity: .95; } 100% { scale: 1.6; opacity: 0; } }
+@keyframes fade-in { to { opacity: 1; } }
+
+/* the light fills the sky */
+.burst {
+  position: absolute;
+  z-index: 6;
+  inset: -20%;
+  background: radial-gradient(circle at 50% 46%, #FFFDF6 0%, #FFF0CC 40%, #F7E2B4 80%);
+  opacity: 0;
+  transition: opacity .8s ease 1.6s;
+  pointer-events: none;
+}
+.opened .burst { opacity: 1; }
+
+/* ---------- the hanging scroll ---------- */
+.hero { min-height: 100svh; padding: calc(6svh + env(safe-area-inset-top)) 0 13svh; overflow: hidden; container-type: inline-size; }
+.hero-box { width: max(100%, 100svh * 9 / 16); height: auto; }
+.hero-art { position: absolute; inset: 0; background: url("art/sky.webp") center / cover no-repeat; }
+.art-yaochi .hero-art { background-image: url("art/yaochi.webp"); }
+
+.scroll { position: relative; z-index: 2; width: min(80%, 340px); margin: 0 auto; }
+.rod { display: block; position: relative; z-index: 2; background: center / 100% 100% no-repeat; filter: drop-shadow(0 4px 4px rgba(60, 50, 40, .25)); }
+.rod-top { width: 116%; margin-left: -8%; aspect-ratio: 900 / 297; background-image: url("art/scroll-top.webp"); }
+.rod-bottom { width: 112%; margin: -2% 0 0 -6%; aspect-ratio: 900 / 133; background-image: url("art/scroll-bottom.webp"); }
+/* the paper unrolls downward from the top rod */
+.paper {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  margin-top: -6%;
+  padding: 16% 13% 12%;
+  aspect-ratio: 800 / 1056;
+  overflow: hidden;
+  background: url("art/scroll-paper.webp") center / 100% 100% no-repeat;
+  box-shadow: 0 10px 24px rgba(60, 50, 40, .18);
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path 1.6s cubic-bezier(.45, 0, .25, 1) .15s;
+}
+.revealed .paper { clip-path: inset(0 0 -2% 0); }
+.rod-bottom { transform: translateY(calc(-1 * min(80cqw, 340px) * 1056 / 800 + 6%)); transition: transform 1.6s cubic-bezier(.45, 0, .25, 1) .15s; }
+.revealed .rod-bottom { transform: none; }
+.plaque { width: 70%; height: auto; }
+.event { margin: 3% 0 4%; font-family: var(--brush); font-weight: 400; font-size: min(11cqw, 46px); letter-spacing: .3em; padding-left: .3em; line-height: 1.2; color: var(--ink); }
+.vtext {
+  writing-mode: vertical-rl;
+  height: 15.5em;
+  font-family: var(--kai);
+  font-size: min(4.2cqw, 17px);
+  line-height: 2.2;
+  letter-spacing: .14em;
+}
+.vtext p { margin-left: .3em; }
+#scroll-dates span { display: block; margin-left: .3em; }
+.v-guest { font-size: 1.15em; color: var(--ink); }
+.v-sign { padding-top: 6em; color: var(--soft); }
+/* the words appear after the paper has unrolled */
+.paper > *, .vtext p { opacity: 0; transition: opacity 1s ease; }
+.revealed .paper > *, .revealed .vtext p { opacity: 1; }
+.revealed:not(.hosting) .plaque { transition-delay: 1.1s; }
+.revealed:not(.hosting) .event { transition-delay: 1.4s; }
+.revealed:not(.hosting) .vtext { transition-delay: 1.6s; }
+.revealed:not(.hosting) .vtext p:nth-child(1) { transition-delay: 1.8s; }
+.revealed:not(.hosting) .vtext p:nth-child(2) { transition-delay: 2.1s; }
+.revealed:not(.hosting) .vtext p:nth-child(3) { transition-delay: 2.4s; }
+.revealed:not(.hosting) .vtext p:nth-child(4) { transition-delay: 2.7s; }
+.revealed:not(.hosting) .vtext p:nth-child(5) { transition-delay: 3s; }
+
+.scroll-hint {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: calc(3svh + env(safe-area-inset-bottom));
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(168, 132, 74, .6);
+  border-radius: 50%;
+  background: rgba(246, 243, 238, .7);
+  opacity: 0;
+  transition: opacity .8s ease 3.2s;
+}
+.revealed .scroll-hint { opacity: 1; }
+.scroll-hint svg { width: 18px; height: 18px; fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; animation: nudge 2.4s ease-in-out infinite; }
+.scroll-hint:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@keyframes nudge { 50% { translate: 0 4px; } }
+
+/* peach petals drifting down */
+.petals i {
+  position: absolute;
+  z-index: 3;
+  top: -20px;
+  left: var(--x, 20%);
+  width: 9px;
+  height: 7px;
+  border-radius: 60% 40% 60% 40%;
+  background: #F2C6C8;
+  opacity: .85;
+  animation: fall var(--d, 11s) linear var(--w, 0s) infinite;
+  pointer-events: none;
+}
+.petals i:nth-child(1) { --x: 12%; --d: 12s; --w: -2s; }
+.petals i:nth-child(2) { --x: 30%; --d: 14s; --w: -7s; }
+.petals i:nth-child(3) { --x: 48%; --d: 10s; --w: -4s; }
+.petals i:nth-child(4) { --x: 66%; --d: 13s; --w: -9s; }
+.petals i:nth-child(5) { --x: 80%; --d: 11s; --w: -1s; }
+.petals i:nth-child(6) { --x: 92%; --d: 15s; --w: -11s; }
+@keyframes fall {
+  0% { transform: translate(0, 0) rotate(0); }
+  50% { transform: translate(-30px, 55svh) rotate(200deg); }
+  100% { transform: translate(10px, 110svh) rotate(420deg); }
+}
+
+/* ---------- reveal on scroll ---------- */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(5px);
+  transition: opacity 1.1s var(--ease), transform 1.1s var(--ease), filter 1.1s var(--ease);
+}
+[data-reveal].in { opacity: 1; transform: none; filter: none; }
+
+/* ---------- dates, countdown, place ---------- */
+.dates { display: flex; justify-content: center; gap: 14px; margin: 24px 0 0; padding: 0; list-style: none; }
+.dates li {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  outline: 1px solid rgba(211, 198, 178, .5);
+  outline-offset: 3px;
+  background: var(--paper-hi);
+  font-family: var(--serif);
+  font-size: 17px;
+  letter-spacing: .08em;
+}
+.time-line { margin-top: 16px; font-size: 15px; letter-spacing: .2em; color: var(--soft); }
+
+.countdown { padding-top: 30px; }
+.clock { display: flex; justify-content: center; gap: 14px; margin-top: 22px; }
+.clock p { min-width: 58px; }
+.clock span { display: block; font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1.1; color: var(--gold); font-variant-numeric: lining-nums tabular-nums; }
+.clock small { font-size: 13px; letter-spacing: .1em; color: var(--soft); }
+.countdown-note { margin-top: 20px; font-size: 17px; letter-spacing: .14em; }
+
+.venue-name { margin-top: 18px; font-family: var(--brush); font-size: 32px; letter-spacing: .2em; padding-left: .2em; }
+.venue-address { margin-top: 6px; font-size: 15px; letter-spacing: .08em; color: var(--soft); }
+.btn {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 9px 24px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  background: var(--paper-hi);
+  color: var(--ink);
+  font-size: 14px;
+  letter-spacing: .3em;
+  text-decoration: none;
+}
+.btn.ghost { background: transparent; }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+/* ---------- program ---------- */
+.program { overflow: hidden; }
+.peach-branch { position: absolute; top: 0; right: -6%; width: 46%; aspect-ratio: 3 / 2; pointer-events: none; }
+.art-peach-branch .peach-branch { background: url("art/peach-branch.webp") right top / contain no-repeat; }
+.program-note { margin-top: 18px; font-size: 16px; letter-spacing: .3em; color: var(--soft); }
+.p-block { max-width: 320px; margin: 24px auto 0; text-align: left; }
+.p-day { padding-bottom: 6px; border-bottom: 1px solid var(--line); font-family: var(--serif); font-weight: 600; font-size: 15px; letter-spacing: .14em; color: var(--gold); }
+.p-list { margin: 8px 0 0; padding: 0; list-style: none; }
+.p-item { display: flex; gap: 14px; padding: 7px 0; font-size: 16px; }
+.p-time { flex: none; min-width: 52px; font-family: var(--serif); color: var(--soft); font-variant-numeric: lining-nums; }
+
+/* ---------- deities ---------- */
+.deities { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 10px; max-width: 360px; margin: 26px auto 0; padding: 0; list-style: none; }
+.deity { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 12px; border: 1px solid var(--line); background: rgba(246, 243, 238, .6); }
+.deity.main { grid-column: 1 / -1; }
+.d-img { width: 100%; height: 84px; object-fit: contain; }
+.deity.main .d-img { height: 120px; }
+.d-role { margin-top: 6px; font-size: 12px; letter-spacing: .4em; padding-left: .4em; color: var(--gold); }
+.d-name { font-family: var(--brush); font-size: 17px; letter-spacing: .02em; white-space: nowrap; }
+.deity.main .d-name { font-size: 24px; letter-spacing: .2em; }
+
+/* ---------- footer ---------- */
+.foot { padding: 0 24px calc(40px + env(safe-area-inset-bottom)); }
+.lotus-pond { margin: 0 -24px 14px; aspect-ratio: 3 / 2; background: url("art/lotus.webp") center 70% / 34% auto no-repeat; }
+.art-lotus-pond .lotus-pond { background: url("art/lotus-pond.webp") center / 100% auto no-repeat; }
+.foot-sign { font-family: var(--brush); font-size: 26px; letter-spacing: .24em; padding-left: .24em; }
+.credit { margin-top: 26px; font-family: var(--serif); font-size: 11px; line-height: 1.6; color: var(--soft); }
+
+/* ---------- host link maker ---------- */
+.host {
+  position: relative;
+  z-index: 70;
+  max-width: var(--col);
+  margin: 0 auto;
+  padding: 40px 22px 26px;
+  background: #FFF;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--serif);
+  text-align: left;
+}
+.host h2 { font-size: 18px; }
+.host-lead, .host-note { margin-top: 6px; font-size: 13px; line-height: 1.7; color: var(--soft); }
+.host textarea {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-hi);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.7;
+  resize: vertical;
+}
+.host-row { display: flex; gap: 10px; margin-top: 10px; }
+.host button {
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper-hi);
+  font-size: 14px;
+  cursor: pointer;
+}
+.host button.ghost { border: 1px solid var(--line); background: transparent; color: var(--ink); }
+.host button:focus-visible, .host textarea:focus-visible, .host input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#host-links { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+#host-links li { display: flex; align-items: center; gap: 8px; }
+#host-links .who { flex: none; min-width: 90px; font-size: 14px; }
+#host-links input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper-hi);
+  color: var(--soft);
+  font-size: 12px;
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+  }
+  .courier { display: none; }
+  .letter { opacity: 1; transform: translate(-50%, -50%); }
+  [data-reveal], .paper > *, .vtext p { opacity: 1; transform: none; filter: none; }
+  .paper { clip-path: none; }
+  .rod-bottom { transform: none; }
+  html { scroll-behavior: auto; }
+}
