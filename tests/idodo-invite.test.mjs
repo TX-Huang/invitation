@@ -254,3 +254,33 @@ test('15. every painting the stylesheet waits for is one the page loads', async 
     dom.window.close();
   }
 });
+
+// 16. the tied ribbon is one continuous piece
+test('16. both ribbon halves show the same full-length strip, so the tied ribbon has no seam', withDom('', undefined, (win, doc) => {
+  const halves = doc.querySelectorAll('.ribbon .r-half');
+  assert.equal(halves.length, 2);
+  halves.forEach((half) => assert.ok(half.querySelector('.r-strip'), 'each half holds a full-length strip'));
+}));
+
+// 17. the opening tells a story, one step after another
+test('17. the opening takes at least 6.5 s, and the envelope leaves exactly when the stylesheet has faded it out', async () => {
+  const css = await readFile(path.join(path.dirname(PAGE), 'style.css'), 'utf8');
+  const envelopeRule = css.match(/\.envelope \{[^}]*\}/)[0];
+  const fadeEnd = Number(envelopeRule.match(/visibility 0s linear ([\d.]+)s/)[1]) * 1000;
+
+  const delays = [];
+  const recordTimers = (win) => {
+    const real = win.setTimeout.bind(win);
+    win.setTimeout = (fn, ms, ...rest) => { delays.push(ms); return real(fn, ms, ...rest); };
+  };
+  const dom = await open('', undefined, recordTimers);
+  try {
+    delays.length = 0;
+    dom.window.document.querySelector('#envelope').click();
+    const hideAfter = Math.max(...delays);
+    assert.ok(hideAfter >= 6500, `opening lasts ${hideAfter} ms; it should take at least 6500 ms`);
+    assert.equal(hideAfter, fadeEnd, 'app.js removes the envelope when style.css has finished fading it');
+  } finally {
+    dom.window.close();
+  }
+});

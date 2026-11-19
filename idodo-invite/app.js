@@ -15,7 +15,7 @@
   const MAPS = 'https://www.google.com/maps/search/?api=1&query=';
   const ICONS = ['welcome', 'ceremony', 'cocktail', 'dinner', 'cake', 'dance', 'stars', 'goodnight'];
   const ART = ['envelope', 'card-frame', 'clouds', 'garden', 'blossoms', 'birds', 'bow'];
-  const OPEN_MS = 4600; // must match the end of the opening timeline in style.css
+  const OPEN_MS = 7400; // must match the end of the opening timeline in style.css
   const ART_WAIT_MS = 2500; // show the envelope even if its painting is slow
 
   const state = { content: null, lang: 'zh', guest: '', timer: 0 };
