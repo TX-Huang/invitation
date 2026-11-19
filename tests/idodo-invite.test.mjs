@@ -1,6 +1,7 @@
 // Acceptance tests for idodo-invite: load the real page in jsdom and use it like a guest would.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import jsdom from 'jsdom';
@@ -17,14 +18,15 @@ const localOnly = {
 };
 
 // Open the page with a query string. `patch` edits the content object right
-// after content.js sets it, before app.js reads it.
-async function open(query = '', patch = (c) => c) {
+// after content.js sets it, before app.js reads it. `setup` runs on the window before any script.
+async function open(query = '', patch = (c) => c, setup = () => {}) {
   const dom = await JSDOM.fromFile(PAGE, {
     url: pathToFileURL(PAGE).href + query,
     runScripts: 'dangerously',
     resources: localOnly,
     pretendToBeVisual: true,
     beforeParse(win) {
+      setup(win);
       let stored;
       Object.defineProperty(win, 'IDODO_CONTENT', {
         configurable: true,
@@ -203,3 +205,53 @@ test('10. guests never see the link maker', withDom('?to=Amy', undefined, (win, 
 test('11. the page asks search engines not to index it', withDom('', undefined, (win, doc) => {
   assert.match(doc.querySelector('meta[name="robots"]').content, /noindex/);
 }));
+
+// 13. the envelope is wide, like a real one
+test('13. stage, ribbon, bow and tap hint all sit on one envelope box', withDom('', undefined, (win, doc) => {
+  const box = doc.querySelector('#envelope > .env-box');
+  assert.ok(box, 'there is an .env-box inside #envelope');
+  for (const sel of ['.env-stage', '.ribbon-wrap', '.bow-wrap', '.tap']) {
+    assert.ok(box.querySelector(sel), `${sel} is inside .env-box`);
+  }
+}));
+
+// Replace Image so the test can see which paintings the page asks for, and finish loading them by hand.
+function recordImages(list) {
+  return (win) => {
+    class FakeImage {
+      set src(value) { this.url = value; list.push(this); }
+      get src() { return this.url; }
+    }
+    Object.defineProperty(win, 'Image', { configurable: true, writable: true, value: FakeImage });
+  };
+}
+
+test('13. the page uses the wide paintings and shows the envelope once the wide one has loaded', async () => {
+  const images = [];
+  const dom = await open('', undefined, recordImages(images));
+  const root = dom.window.document.documentElement;
+  try {
+    const urls = images.map((img) => img.src);
+    assert.ok(urls.includes('art/envelope-wide.webp'), 'asks for the wide envelope');
+    assert.ok(urls.includes('art/card-wide.webp'), 'asks for the wide card');
+    assert.ok(!root.classList.contains('art-ready'), 'waits for the painting');
+    images.find((img) => img.src === 'art/envelope-wide.webp').onload();
+    assert.ok(root.classList.contains('art-envelope-wide'));
+    assert.ok(root.classList.contains('art-ready'));
+  } finally {
+    dom.window.close();
+  }
+});
+
+test('13. every painting the stylesheet waits for is one the page loads', async () => {
+  const css = await readFile(path.join(path.dirname(PAGE), 'style.css'), 'utf8');
+  const wanted = new Set([...css.matchAll(/\.art-([a-z-]+)/g)].map((m) => m[1]).filter((name) => name !== 'ready'));
+  const images = [];
+  const dom = await open('', undefined, recordImages(images));
+  try {
+    const loaded = new Set(images.map((img) => img.src));
+    for (const name of wanted) assert.ok(loaded.has(`art/${name}.webp`), `style.css uses .art-${name} but the page never loads art/${name}.webp`);
+  } finally {
+    dom.window.close();
+  }
+});

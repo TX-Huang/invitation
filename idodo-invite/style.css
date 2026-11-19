@@ -139,26 +139,40 @@ section { position: relative; padding: 76px 30px; text-align: center; }
  *   4.40–5.50  the text on the card appears
  */
 .envelope {
+  /* the envelope is always wide (7:5) like a real one, and fits the screen with 16px to spare;
+     on a phone held upright it is smaller — turn the phone sideways to see it big */
+  --env-w: min(100vw - 32px, (100svh - 32px) * 1.4, 1000px);
   position: fixed;
   z-index: 50;
   inset: 0;
-  max-width: var(--col);
-  margin: 0 auto;
+  display: grid;
+  place-items: center;
   overflow: hidden;
   cursor: pointer;
   outline: none;
-  background: var(--paper-lo);
+  /* a soft lilac tabletop, lit from above */
+  background:
+    radial-gradient(ellipse 75% 65% at 50% 45%, rgba(255, 255, 255, .42), transparent 72%),
+    #D5CBDC var(--grain);
   transition: opacity .5s ease 4.1s, visibility 0s linear 4.6s;
 }
 .opened .envelope { opacity: 0; visibility: hidden; pointer-events: none; }
 
-/* until the painting has loaded, show plain paper instead of a half-drawn envelope */
-.env-stage, .ribbon-wrap, .bow-wrap { transition: opacity .9s ease; }
-html:not(.art-ready) .env-stage,
-html:not(.art-ready) .ribbon-wrap,
-html:not(.art-ready) .bow-wrap { opacity: 0; }
+.env-box {
+  position: relative;
+  width: var(--env-w);
+  aspect-ratio: 7 / 5;
+  box-shadow: 0 22px 50px rgba(40, 28, 60, .24), 0 3px 8px rgba(40, 28, 60, .16);
+  /* at the end the camera moves in on the card while everything fades */
+  transition: opacity .9s ease, transform 1.5s cubic-bezier(.45, 0, .25, 1) 3.1s;
+}
+.opened .env-box { transform: scale(1.7); }
 
-.env-stage { position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 35%; }
+/* until the painting has loaded, show the empty tabletop instead of a half-drawn envelope */
+html:not(.art-ready) .env-box { opacity: 0; }
+
+/* depth scales with the envelope, so the flap lifts the same on a phone and on a desktop */
+.env-stage { position: absolute; inset: 0; perspective: calc(var(--env-w) * .93); perspective-origin: 50% 35%; }
 
 /* inside of the envelope: shaded paper, darkest deep in the pocket */
 .env-pocket {
@@ -224,8 +238,8 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
     radial-gradient(circle at 24% 6%, #7E8F5A 0 7px, transparent 8px),
     linear-gradient(176deg, #9DB4E4 0%, #C9D6F0 34%, #F2DDCF 49%, #E9C3A6 53%, #5F7FC4 56%, #2F4FA3 100%);
 }
-.art-envelope .flap, .art-envelope .flap-top .face.front {
-  background: url("art/envelope.webp") center / cover no-repeat;
+.art-envelope-wide .flap, .art-envelope-wide .flap-top .face.front {
+  background: url("art/envelope-wide.webp") center / cover no-repeat;
 }
 .flap-left { clip-path: polygon(0 0, 51% 50%, 0 100%); }
 .flap-right { clip-path: polygon(100% 0, 49% 50%, 100% 100%); }
@@ -284,6 +298,8 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   position: absolute;
   z-index: 4;
   inset: 0;
+  /* the ribbon wraps around the back, so it stops at the envelope's edges */
+  overflow: hidden;
   pointer-events: none;
   filter: drop-shadow(0 1.5px 2px rgba(40, 28, 60, .3));
 }
@@ -332,7 +348,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   left: 50%;
   top: 50%;
   /* bow.webp is 720×672; its knot sits at 49% across, 28% down — that point goes on the ribbon */
-  width: min(48%, 220px);
+  width: min(34%, 250px);
   aspect-ratio: 720 / 672;
   transform: translate(-49%, -28%) rotate(20deg);
   transform-origin: 49% 28%;
@@ -350,13 +366,14 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   100% { transform: scale(.22) rotate(-16deg); opacity: 0; filter: blur(3px); }
 }
 
-/* tap hint: quiet text with a ripple, appears after a moment */
+/* tap hint: quiet text with a ripple, appears after a moment; sits low on the envelope */
 .tap {
   position: absolute;
   z-index: 6;
   left: 0;
   right: 0;
-  bottom: calc(7svh + env(safe-area-inset-bottom));
+  bottom: 5%;
+  margin: 0;
   text-align: center;
   opacity: 0;
   animation: fade-in 1s ease 1.4s forwards;
@@ -373,6 +390,10 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   letter-spacing: .42em;
   color: #FFF;
   text-shadow: 0 1px 8px rgba(18, 28, 70, .6), 0 0 2px rgba(18, 28, 70, .45);
+  /* a soft shade behind the words, so they read over white houses or the ribbon */
+  padding-block: 10px 12px;
+  padding-inline: calc(.42em + 30px) 30px;
+  background: radial-gradient(closest-side, rgba(24, 30, 60, .34), rgba(24, 30, 60, .16) 62%, transparent);
 }
 .tap span::before {
   content: "";
@@ -388,6 +409,12 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
 @keyframes fade-in { to { opacity: 1; } }
 @keyframes ripple { 0% { scale: .55; opacity: .95; } 100% { scale: 1.6; opacity: 0; } }
 .opened .tap { animation: none; opacity: 0; transition: opacity .25s ease; }
+/* phone held upright: there is room on the tabletop under the envelope, so the hint goes there */
+@media (max-aspect-ratio: 1 / 1) {
+  .tap { top: calc(100% + 6svh); bottom: auto; }
+  .tap span { color: var(--ink); text-shadow: none; background: none; }
+  .tap span::before { border-color: rgba(58, 51, 69, .7); box-shadow: none; }
+}
 
 /* language toggle and music button wait until the card is out */
 .lang, .music { transition: opacity .6s ease 4.6s, visibility 0s linear 4.6s; }
@@ -441,6 +468,8 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
     linear-gradient(180deg, #8EA6DB 0%, #BACBEB 13%, var(--paper) 28%, var(--paper) 72%, #8FA7D8 83%, #3E5FB0 92%, #2F4FA3 100%);
 }
 .art-card-frame .frame-art { background: url("art/card-frame.webp") center / cover no-repeat; }
+/* the card inside the envelope is wide too */
+.art-card-wide .env-card.frame-art { background: url("art/card-wide.webp") center / cover no-repeat; }
 .frame-art::after {
   content: "";
   position: absolute;
@@ -642,7 +671,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 70%, transparent);
   mask-image: linear-gradient(transparent, #000 22%, #000 70%, transparent);
 }
-.art-envelope .day-strip { background: url("art/envelope.webp") center 80% / cover no-repeat; }
+.art-envelope-wide .day-strip { background: url("art/envelope-wide.webp") center 80% / cover no-repeat; }
 .day .smallcaps { margin-top: 10px; }
 .datestrip {
   display: flex;

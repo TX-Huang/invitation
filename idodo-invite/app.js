@@ -14,7 +14,8 @@
     'August', 'September', 'October', 'November', 'December'];
   const MAPS = 'https://www.google.com/maps/search/?api=1&query=';
   const ICONS = ['welcome', 'ceremony', 'cocktail', 'dinner', 'cake', 'dance', 'stars', 'goodnight'];
-  const ART = ['envelope', 'card-frame', 'clouds', 'garden', 'blossoms', 'birds', 'bow'];
+  const ENVELOPE_ART = 'envelope-wide'; // the envelope waits for this painting
+  const ART = [ENVELOPE_ART, 'card-wide', 'card-frame', 'clouds', 'garden', 'blossoms', 'birds', 'bow'];
   const OPEN_MS = 4600; // must match the end of the opening timeline in style.css
   const ART_WAIT_MS = 2500; // show the envelope even if its painting is slow
 
@@ -357,9 +358,9 @@
       const img = new Image();
       img.onload = () => {
         root.classList.add(`art-${name}`);
-        if (name === 'envelope') ready();
+        if (name === ENVELOPE_ART) ready();
       };
-      if (name === 'envelope') img.onerror = ready;
+      if (name === ENVELOPE_ART) img.onerror = ready;
       img.src = `art/${name}.webp`;
     });
   }
