@@ -262,24 +262,79 @@ test('16. both ribbon halves show the same full-length strip, so the tied ribbon
   halves.forEach((half) => assert.ok(half.querySelector('.r-strip'), 'each half holds a full-length strip'));
 }));
 
-// 17. the opening tells a story, one step after another
-test('17. the opening takes at least 6.5 s, and the envelope leaves exactly when the stylesheet has faded it out', async () => {
+// 17–19. the opening tells a story: the bow unties (a video of a real ribbon), then the envelope opens
+// Record timers instead of waiting for them, so the test can run them by hand.
+function recordTimers(list) {
+  return (win) => {
+    const real = win.setTimeout.bind(win);
+    win.setTimeout = (fn, ms, ...rest) => { list.push({ fn, ms }); return real(() => {}, 0, ...rest); };
+  };
+}
+// Make the untie video play (or refuse to) without a real media engine.
+function stubVideo(win, plays) {
+  win.HTMLMediaElement.prototype.play = function play() {
+    this.played_ = true;
+    return plays ? Promise.resolve() : Promise.reject(new Error('NotAllowedError'));
+  };
+}
+const flush = () => new Promise((resolve) => { setImmediate(resolve); });
+const runTimers = (timers, maxMs) => timers.splice(0).filter((t) => t.ms <= maxMs).forEach((t) => t.fn());
+
+async function cssFadeEndMs() {
   const css = await readFile(path.join(path.dirname(PAGE), 'style.css'), 'utf8');
   const envelopeRule = css.match(/\.envelope \{[^}]*\}/)[0];
-  const fadeEnd = Number(envelopeRule.match(/visibility 0s linear ([\d.]+)s/)[1]) * 1000;
+  return Number(envelopeRule.match(/visibility 0s linear ([\d.]+)s/)[1]) * 1000;
+}
 
-  const delays = [];
-  const recordTimers = (win) => {
-    const real = win.setTimeout.bind(win);
-    win.setTimeout = (fn, ms, ...rest) => { delays.push(ms); return real(fn, ms, ...rest); };
-  };
-  const dom = await open('', undefined, recordTimers);
+test('17. tapping plays the untie video, and the flap waits until the video has ended', async () => {
+  const timers = [];
+  const dom = await open('', undefined, (win) => { recordTimers(timers)(win); stubVideo(win, true); });
+  const { document: doc, Event } = dom.window;
   try {
-    delays.length = 0;
-    dom.window.document.querySelector('#envelope').click();
-    const hideAfter = Math.max(...delays);
-    assert.ok(hideAfter >= 6500, `opening lasts ${hideAfter} ms; it should take at least 6500 ms`);
-    assert.equal(hideAfter, fadeEnd, 'app.js removes the envelope when style.css has finished fading it');
+    const video = doc.querySelector('#envelope video.env-video');
+    assert.ok(video, 'the envelope has an untie video');
+    assert.ok(video.muted && video.hasAttribute('playsinline'), 'muted and inline, so phones let it play');
+    doc.querySelector('#envelope').click();
+    await flush();
+    assert.ok(video.played_, 'the video starts on the tap');
+    assert.ok(!doc.body.classList.contains('untied'), 'the flap waits for the ribbon');
+    video.dispatchEvent(new Event('ended'));
+    assert.ok(doc.body.classList.contains('untied'), 'the envelope opens once the ribbon is off');
+  } finally {
+    dom.window.close();
+  }
+});
+
+test('18. if the video cannot play, the drawn ribbon unties instead, and the whole opening still takes at least 6.5 s', async () => {
+  const timers = [];
+  const dom = await open('', undefined, (win) => { recordTimers(timers)(win); stubVideo(win, false); });
+  const doc = dom.window.document;
+  try {
+    timers.length = 0;
+    doc.querySelector('#envelope').click();
+    await flush();
+    assert.ok(doc.querySelector('.env-video').hidden, 'the video steps aside');
+    const untieMs = Math.min(...timers.map((t) => t.ms).filter((ms) => ms > 0));
+    runTimers(timers, untieMs);
+    assert.ok(doc.body.classList.contains('untied'));
+    const hideMs = Math.max(...timers.map((t) => t.ms));
+    assert.equal(hideMs, await cssFadeEndMs(), 'app.js removes the envelope when style.css has finished fading it');
+    assert.ok(untieMs + hideMs >= 6500, `opening lasts ${untieMs + hideMs} ms; it should take at least 6500 ms`);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test('19. if the video stalls, the envelope still opens', async () => {
+  const timers = [];
+  const dom = await open('', undefined, (win) => { recordTimers(timers)(win); stubVideo(win, true); });
+  const doc = dom.window.document;
+  try {
+    timers.length = 0;
+    doc.querySelector('#envelope').click();
+    await flush();
+    runTimers(timers, 10000);
+    assert.ok(doc.body.classList.contains('untied'));
   } finally {
     dom.window.close();
   }

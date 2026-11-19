@@ -41,6 +41,8 @@
 
 <!-- the envelope -->
 <div id="envelope" class="envelope" role="button" tabindex="0">
+  <!-- everything is drawn on one 9:16 sheet that covers the screen, so it lines up with the untie video -->
+  <div class="env-box">
   <div class="env-stage" aria-hidden="true">
     <!-- inside of the envelope, and the card waiting in it -->
     <div class="env-pocket"></div>
@@ -109,6 +111,10 @@
         <path d="M112 60 C116 70 115 80 111 86 M126 58 C128 68 128 78 124 88" fill="none" stroke="#C4B8CC" stroke-width="1.2" stroke-linecap="round" opacity=".75"/>
       </g>
     </svg>
+  </div>
+
+  <!-- a real satin ribbon being untied: it starts on the tied envelope and ends on the bare one -->
+  <video id="untie-video" class="env-video" src="art/untie.mp4" poster="art/untie-poster.webp" muted playsinline preload="auto" disablepictureinpicture aria-hidden="true"></video>
   </div>
 
   <p class="tap"><span data-t="tapToOpen"></span></p>

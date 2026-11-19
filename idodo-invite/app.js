@@ -15,7 +15,9 @@
   const MAPS = 'https://www.google.com/maps/search/?api=1&query=';
   const ICONS = ['welcome', 'ceremony', 'cocktail', 'dinner', 'cake', 'dance', 'stars', 'goodnight'];
   const ART = ['envelope', 'card-frame', 'clouds', 'garden', 'blossoms', 'birds', 'bow'];
-  const OPEN_MS = 7400; // must match the end of the opening timeline in style.css
+  const UNTIE_MS = 2700; // the drawn ribbon (used when the video cannot play) is off by then
+  const UNTIE_VIDEO_MAX_MS = 6000; // if the untie video stalls, open the envelope anyway
+  const OPEN_MS = 4700; // from untied to gone: must match the envelope fade-out in style.css
   const ART_WAIT_MS = 2500; // show the envelope even if its painting is slow
 
   const state = { content: null, lang: 'zh', guest: '', timer: 0 };
@@ -234,6 +236,32 @@
     }
   }
 
+  // The ribbon is off: the flap lifts, the card rises, and the envelope fades away.
+  function untie() {
+    const body = document.body;
+    if (body.classList.contains('untied')) return;
+    body.classList.add('untied');
+    window.setTimeout(() => { $('#envelope').hidden = true; }, reducedMotion() ? 0 : OPEN_MS);
+  }
+
+  // Play the video of the real ribbon being untied. If it cannot play, the drawn ribbon unties instead.
+  function playUntie() {
+    const video = $('#untie-video');
+    const drawn = () => {
+      video.hidden = true;
+      window.setTimeout(untie, UNTIE_MS);
+    };
+    if (video.hidden) return drawn();
+    video.addEventListener('ended', untie, { once: true });
+    window.setTimeout(untie, UNTIE_VIDEO_MAX_MS);
+    try {
+      Promise.resolve(video.play()).catch(drawn);
+    } catch (err) {
+      drawn();
+    }
+    return undefined;
+  }
+
   function openEnvelope() {
     const body = document.body;
     if (body.classList.contains('opened')) return;
@@ -243,7 +271,8 @@
     env.setAttribute('aria-hidden', 'true');
     env.tabIndex = -1;
     $('#main').removeAttribute('inert');
-    window.setTimeout(() => { env.hidden = true; }, reducedMotion() ? 0 : OPEN_MS);
+    if (reducedMotion()) untie();
+    else playUntie();
     $('#main').focus({ preventScroll: true });
     playMusic();
   }
@@ -251,6 +280,9 @@
   function setupEnvelope() {
     const env = $('#envelope');
     if (document.body.classList.contains('sealed')) $('#main').setAttribute('inert', '');
+    const video = $('#untie-video');
+    video.muted = true; // the attribute alone is not always applied; phones only play muted inline video freely
+    video.addEventListener('error', () => { video.hidden = true; });
     env.addEventListener('click', openEnvelope);
     env.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -312,7 +344,7 @@
     if (!isHost) return;
     $('#host').hidden = false;
     document.body.classList.remove('sealed');
-    document.body.classList.add('opened', 'hosting');
+    document.body.classList.add('opened', 'untied', 'hosting');
     $('#envelope').hidden = true;
     $('#main').removeAttribute('inert');
     $('#host-make').addEventListener('click', makeLinks);

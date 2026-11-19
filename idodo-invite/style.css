@@ -130,14 +130,16 @@ section { position: relative; padding: 76px 30px; text-align: center; }
 @keyframes pulse { 50% { opacity: .4; } }
 
 /* ---------- envelope ----------
- * Timeline after a tap — one step after another, so it reads like a little story:
- *   0.00–1.40  the bow gets a small tug, loosens and slips away
- *   1.00–2.70  the two ribbon ends slowly slide off the envelope
- *   2.70–2.90  a beat: the bare envelope
- *   2.90–5.90  the top flap lifts toward you, stands up for a while, then folds back; its shadow spreads
- *   5.30–7.30  the card rises out of the pocket while the front flaps sweep past the camera
- *   6.90–7.40  the envelope fades into the identical card underneath (app.js OPEN_MS = 7400)
- *   7.20–8.40  the text on the card appears
+ * Timeline after a tap — one step after another, so it reads like a little story.
+ * Step 1, untying (body.opened):
+ *   a video of a real satin ribbon being untied (art/untie.mp4) plays on top of the envelope.
+ *   If it cannot play, the drawn ribbon unties instead: the bow loosens (0–1.4 s) and the ribbon
+ *   slides off (1.0–2.7 s; app.js UNTIE_MS = 2700).
+ * Step 2, opening (body.untied, when the video ends), counted from that moment:
+ *   0.20–3.20  the top flap lifts toward you, stands up for a while, then folds back; its shadow spreads
+ *   2.60–4.60  the card rises out of the pocket while the front flaps sweep past the camera
+ *   4.20–4.70  the envelope fades into the identical card underneath (app.js OPEN_MS = 4700)
+ *   4.50–5.70  the text on the card appears
  */
 .envelope {
   position: fixed;
@@ -149,9 +151,21 @@ section { position: relative; padding: 76px 30px; text-align: center; }
   cursor: pointer;
   outline: none;
   background: var(--paper-lo);
-  transition: opacity .5s ease 6.9s, visibility 0s linear 7.4s;
+  transition: opacity .5s ease 4.2s, visibility 0s linear 4.7s;
 }
-.opened .envelope { opacity: 0; visibility: hidden; pointer-events: none; }
+.untied .envelope { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* The envelope is drawn on a 9:16 sheet that covers the screen, the same way the paintings and the
+   untie video cover it — so the flap, the ribbon and the video always line up, whatever the phone's shape. */
+.envelope { container-type: size; }
+.env-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100cqw, 100cqh * 9 / 16);
+  aspect-ratio: 9 / 16;
+  transform: translate(-50%, -50%);
+}
 
 /* until the painting has loaded, show plain paper instead of a half-drawn envelope */
 .env-stage, .ribbon-wrap, .bow-wrap { transition: opacity .9s ease; }
@@ -168,7 +182,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   background:
     radial-gradient(75% 42% at 50% 50%, rgba(40, 34, 52, .32), transparent 72%),
     linear-gradient(180deg, #D8CFDE, #C7BCCF);
-  transition: opacity 1.2s ease 5.7s;
+  transition: opacity 1.2s ease 3s;
 }
 .env-pocket::after, .flap::after, .flap-top .face::after {
   content: "";
@@ -179,7 +193,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   opacity: .7;
   pointer-events: none;
 }
-.opened .env-pocket { opacity: 0; }
+.untied .env-pocket { opacity: 0; }
 
 /* the card waits a little lower and smaller inside, in the shade */
 .env-card {
@@ -188,7 +202,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   transform: translateY(12%) scale(.86);
   transform-origin: 50% 0;
   box-shadow: 0 -1px 8px rgba(40, 28, 60, .2);
-  transition: transform 2s cubic-bezier(.3, 0, .15, 1) 5.3s, box-shadow 1.2s ease 5.7s;
+  transition: transform 2s cubic-bezier(.3, 0, .15, 1) 2.6s, box-shadow 1.2s ease 3s;
 }
 .env-card::before {
   content: "";
@@ -196,19 +210,19 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   z-index: 3;
   inset: 0;
   background: linear-gradient(180deg, rgba(40, 34, 52, .22), rgba(40, 34, 52, .52));
-  transition: opacity 1.6s ease 5.5s;
+  transition: opacity 1.6s ease 2.8s;
 }
-.opened .env-card { transform: none; box-shadow: none; }
-.opened .env-card::before { opacity: 0; }
+.untied .env-card { transform: none; box-shadow: none; }
+.untied .env-card::before { opacity: 0; }
 
 /* front flaps: each casts a soft shadow, so the envelope has real paper edges */
 .env-front {
   position: absolute;
   inset: 0;
   transform-origin: 50% 64%;
-  transition: transform 2s cubic-bezier(.55, 0, .35, 1) 5.3s, opacity 1.3s ease 5.8s;
+  transition: transform 2s cubic-bezier(.55, 0, .35, 1) 2.6s, opacity 1.3s ease 3.1s;
 }
-.opened .env-front { transform: scale(1.55); opacity: 0; }
+.untied .env-front { transform: scale(1.55); opacity: 0; }
 .fw { position: absolute; inset: 0; }
 .fw-left { filter: drop-shadow(3px 0 3px rgba(40, 28, 60, .3)); }
 .fw-right { filter: drop-shadow(-3px 0 3px rgba(40, 28, 60, .3)); }
@@ -279,10 +293,10 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   filter: blur(3px);
   transform: translateY(3px);
   transform-origin: 50% 0;
-  transition: filter 1.8s ease 2.9s, opacity 1.5s ease 3.5s, transform 1.8s ease 2.9s;
+  transition: filter 1.8s ease .2s, opacity 1.5s ease .8s, transform 1.8s ease .2s;
 }
 .top-shadow i { position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 46.5%); background: rgba(32, 28, 40, .46); }
-.opened .top-shadow { filter: blur(20px); opacity: 0; transform: translateY(4%) scaleY(1.08); }
+.untied .top-shadow { filter: blur(20px); opacity: 0; transform: translateY(4%) scaleY(1.08); }
 
 .flap-top {
   position: absolute;
@@ -301,7 +315,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   transform: rotateX(180deg);
   background: linear-gradient(0deg, #F4F0F6, #E2D9E7);
 }
-.opened .flap-top { animation: flap-open 3s linear 2.9s both; }
+.untied .flap-top { animation: flap-open 3s linear .2s both; }
 /* lifts quickly, stands nearly upright for a beat, then folds over and away */
 @keyframes flap-open {
   0% { transform: none; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
@@ -373,7 +387,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   left: 50%;
   top: 50%;
   /* bow.webp is 720×672; its knot sits at 49% across, 28% down — that point goes on the ribbon */
-  width: min(48%, 220px);
+  width: 44%; /* same size as in the untie video */
   aspect-ratio: 720 / 672;
   transform: translate(-49%, -28%) rotate(20deg);
   transform-origin: 49% 28%;
@@ -384,6 +398,18 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
 .bow-art { display: none; background: url("art/bow.webp") center / contain no-repeat; }
 .art-bow .bow-art { display: block; }
 .art-bow .bow-svg { display: none; }
+/* the untie video lies on top: it starts on the tied envelope and ends on the bare one, then fades into it */
+.env-video {
+  position: absolute;
+  z-index: 7;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  transition: opacity .35s ease;
+}
+html:not(.art-ready) .env-video, .untied .env-video { opacity: 0; }
 .opened .bow-svg, .opened .bow-art { animation: untie 1.4s cubic-bezier(.45, 0, .4, 1) forwards; }
 @keyframes untie {
   0% { transform: none; opacity: 1; filter: none; }
@@ -436,8 +462,8 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
 .opened .tap { animation: none; opacity: 0; transition: opacity .25s ease; }
 
 /* language toggle and music button wait until the card is out */
-.lang, .music { transition: opacity .6s ease 7.4s, visibility 0s linear 7.4s; }
-.sealed .lang, .sealed .music { opacity: 0; visibility: hidden; transition: none; }
+.lang, .music { transition: opacity .6s ease 4.7s, visibility 0s linear 4.7s; }
+body:not(.untied) .lang, body:not(.untied) .music { opacity: 0; visibility: hidden; transition: none; }
 
 /* ---------- reveal ---------- */
 [data-reveal] {
@@ -447,13 +473,13 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   transition: opacity 1.1s var(--ease), transform 1.1s var(--ease), filter 1.1s var(--ease);
 }
 [data-reveal].in { opacity: 1; transform: none; filter: none; }
-.sealed .hero [data-reveal] { opacity: 0; transform: translateY(18px); filter: blur(6px); }
-.opened:not(.hosting) .hero-body > :nth-child(1) { transition-delay: 7.2s; }
-.opened:not(.hosting) .hero-body > :nth-child(2) { transition-delay: 7.4s; }
-.opened:not(.hosting) .hero-body > :nth-child(3) { transition-delay: 7.6s; }
-.opened:not(.hosting) .hero-body > :nth-child(4) { transition-delay: 7.8s; }
-.opened:not(.hosting) .hero-body > :nth-child(5) { transition-delay: 8s; }
-.opened:not(.hosting) .hero-body > :nth-child(6) { transition-delay: 8.2s; }
+body:not(.untied) .hero [data-reveal] { opacity: 0; transform: translateY(18px); filter: blur(6px); }
+.untied:not(.hosting) .hero-body > :nth-child(1) { transition-delay: 4.5s; }
+.untied:not(.hosting) .hero-body > :nth-child(2) { transition-delay: 4.7s; }
+.untied:not(.hosting) .hero-body > :nth-child(3) { transition-delay: 4.9s; }
+.untied:not(.hosting) .hero-body > :nth-child(4) { transition-delay: 5.1s; }
+.untied:not(.hosting) .hero-body > :nth-child(5) { transition-delay: 5.3s; }
+.untied:not(.hosting) .hero-body > :nth-child(6) { transition-delay: 5.5s; }
 
 /* paintings wipe in like a brush stroke */
 .paint {
@@ -561,7 +587,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
   animation: fall var(--d) linear var(--dl) infinite;
   animation-play-state: paused;
 }
-.opened .petals i { animation-play-state: running; }
+.untied .petals i { animation-play-state: running; }
 .petals i:nth-child(1) { --x: 12%; --d: 13s; --dl: -2s; --sway: 40px; }
 .petals i:nth-child(2) { --x: 28%; --d: 16s; --dl: -9s; --sway: -30px; --c: #F5D6DC; }
 .petals i:nth-child(3) { --x: 46%; --d: 12s; --dl: -5s; --sway: 50px; }
@@ -808,7 +834,7 @@ html:not(.art-ready) .bow-wrap { opacity: 0; }
     transition-duration: .01ms !important;
     transition-delay: 0s !important;
   }
-  [data-reveal], .sealed .hero [data-reveal] { opacity: 1; transform: none; filter: none; }
+  [data-reveal], body:not(.untied) .hero [data-reveal] { opacity: 1; transform: none; filter: none; }
   .paint { -webkit-mask-image: none; mask-image: none; }
   html { scroll-behavior: auto; }
 }
