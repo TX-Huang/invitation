@@ -1,2 +1,4 @@
 **/src/invite-cards.html
 __pycache__/
+node_modules/
+idodo-invite/src/art/

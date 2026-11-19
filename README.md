@@ -9,6 +9,23 @@ https://tx-huang.github.io/invitation/<資料夾名字>/
 | 資料夾 | 網址 | 是什麼 |
 | --- | --- | --- |
 | `yunan-invite/` | <https://tx-huang.github.io/invitation/yunan-invite/> | 侯畇安 週歲派對（2026/9/28） |
+| `idodo-invite/` | <https://tx-huang.github.io/invitation/idodo-invite/> | Isaac & Dodo 婚禮（日期地點待定） |
+
+## 測試和 lint
+
+`idodo-invite/` 之後的新卡片有自動測試。第一次先裝工具：
+
+```bash
+npm install
+```
+
+```bash
+npm test
+```
+
+```bash
+npm run lint
+```
 
 給朋友的專屬連結在網址後面加 `?to=名字`，例如：
 

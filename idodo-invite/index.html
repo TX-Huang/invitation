@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Isaac &amp; Dodo · Wedding</title>
+<meta name="theme-color" content="#EFEAF2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Pinyon+Script&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Serif+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<script src="content.js"></script>
+<script src="app.js" defer></script>
+</head>
+<body class="sealed">
+
+<!-- host only: personal link maker (?host) -->
+<section id="host" class="host" hidden>
+  <h2 data-t="hostTitle"></h2>
+  <p class="host-lead" data-t="hostLead"></p>
+  <textarea id="host-names" rows="5"></textarea>
+  <div class="host-row">
+    <button type="button" id="host-make" data-t="hostMake"></button>
+    <button type="button" id="host-copy-all" class="ghost" data-t="hostCopyAll"></button>
+  </div>
+  <ul id="host-links"></ul>
+  <p class="host-note" data-t="hostNote"></p>
+</section>
+
+<!-- language + music -->
+<div class="lang" role="group" aria-label="Language">
+  <button type="button" data-lang="zh" aria-pressed="true">中</button>
+  <button type="button" data-lang="en" aria-pressed="false">EN</button>
+</div>
+<button type="button" id="music" class="music" hidden aria-pressed="false">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>
+  <span class="sr" data-t="music"></span>
+</button>
+<audio id="audio" loop preload="none"></audio>
+
+<!-- the envelope -->
+<div id="envelope" class="envelope" role="button" tabindex="0">
+  <div class="env-inside" aria-hidden="true"></div>
+  <div class="flap flap-left" aria-hidden="true"></div>
+  <div class="flap flap-right" aria-hidden="true"></div>
+  <div class="flap flap-bottom" aria-hidden="true"></div>
+  <div class="flap flap-top" aria-hidden="true"><i class="face front"></i><i class="face back"></i></div>
+  <svg class="seams" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 0 L50 52 L100 0 M0 100 L50 47 L100 100"/>
+    <path class="hi" d="M0 0 L50 52 L100 0 M0 100 L50 47 L100 100"/>
+  </svg>
+  <div class="ribbon" aria-hidden="true"><i class="r-top"></i><i class="r-bottom"></i></div>
+  <svg class="bow" viewBox="0 0 200 150" aria-hidden="true">
+    <defs>
+      <linearGradient id="satin" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F3EEF4"/><stop offset="1" stop-color="#D9D0DD"/>
+      </linearGradient>
+    </defs>
+    <path d="M100 62 C70 20 18 18 22 52 C26 82 70 82 100 70 Z" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
+    <path d="M100 62 C130 20 182 18 178 52 C174 82 130 82 100 70 Z" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
+    <path d="M94 74 C80 98 66 122 58 146 L76 140 L84 150 C90 124 98 100 104 76 Z" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
+    <path d="M106 74 C120 98 134 122 142 146 L124 140 L116 150 C110 124 102 100 96 76 Z" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
+    <path d="M44 46 C58 40 76 48 90 60" fill="none" stroke="#E2DAE6" stroke-width="2" stroke-linecap="round"/>
+    <path d="M156 46 C142 40 124 48 110 60" fill="none" stroke="#E2DAE6" stroke-width="2" stroke-linecap="round"/>
+    <rect x="88" y="56" width="24" height="22" rx="9" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
+  </svg>
+  <p class="tap"><span data-t="tapToOpen"></span></p>
+</div>
+
+<main id="main" class="page" tabindex="-1">
+
+  <!-- hero -->
+  <section class="hero">
+    <div class="hero-frame" aria-hidden="true"></div>
+    <div class="petals" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="hero-body">
+      <p id="hero-eyebrow" class="smallcaps" data-t="eyebrow" data-reveal></p>
+      <h1 class="names" data-reveal><span>Isaac</span><span class="amp">&amp;</span><span>Dodo</span></h1>
+      <p id="greeting" class="greeting" data-reveal></p>
+      <div class="sprig" aria-hidden="true" data-reveal></div>
+      <div id="hero-date" class="hero-date" data-reveal></div>
+      <div class="hero-venue" data-reveal>
+        <p class="smallcaps" data-t="venueLabel"></p>
+        <p id="hero-venue" class="venue-name"></p>
+      </div>
+    </div>
+    <a class="scroll-hint" href="#countdown"><span class="sr" data-t="scroll"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
+  </section>
+
+  <!-- countdown -->
+  <section id="countdown" class="countdown">
+    <h2 class="title" data-t="countdownTitle" data-reveal></h2>
+    <p id="countdown-sub" class="subtitle" data-reveal></p>
+    <div class="tile-frame" data-reveal>
+      <i class="bloom b1" aria-hidden="true"></i><i class="bloom b2" aria-hidden="true"></i><i class="bloom b3" aria-hidden="true"></i><i class="bloom b4" aria-hidden="true"></i>
+      <div class="tile-inner">
+        <div id="countdown-clock" class="clock" hidden>
+          <p class="big"><span id="cd-days">0</span><small data-t="days"></small></p>
+          <div class="small-row">
+            <p><span id="cd-hours">0</span><small data-t="hours"></small></p>
+            <p><span id="cd-minutes">0</span><small data-t="minutes"></small></p>
+            <p><span id="cd-seconds">0</span><small data-t="seconds"></small></p>
+          </div>
+        </div>
+        <p id="countdown-note" class="countdown-note" hidden></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- story -->
+  <section class="story">
+    <div class="clouds paint" aria-hidden="true" data-reveal></div>
+    <h2 class="title" data-t="storyTitle" data-reveal></h2>
+    <div id="story-text" class="story-text" data-reveal></div>
+    <p class="signature" data-reveal>Isaac &amp; Dodo</p>
+    <div class="birds-fly" aria-hidden="true" data-reveal></div>
+  </section>
+
+  <!-- celebration -->
+  <section class="celebration">
+    <div class="garden paint" aria-hidden="true" data-reveal></div>
+    <h2 class="title" data-t="celebrationTitle" data-reveal></h2>
+    <p class="smallcaps light" data-t="celebrationSub" data-reveal></p>
+    <div class="ornate" data-reveal>
+      <svg class="corner tl" viewBox="0 0 60 60" aria-hidden="true"><path d="M2 58V14Q2 2 14 2h44M10 50V20q0-10 10-10h30M14 30q8-2 10-10M24 14q-2 8-10 10"/></svg>
+      <svg class="corner tr" viewBox="0 0 60 60" aria-hidden="true"><path d="M2 58V14Q2 2 14 2h44M10 50V20q0-10 10-10h30M14 30q8-2 10-10M24 14q-2 8-10 10"/></svg>
+      <svg class="corner bl" viewBox="0 0 60 60" aria-hidden="true"><path d="M2 58V14Q2 2 14 2h44M10 50V20q0-10 10-10h30M14 30q8-2 10-10M24 14q-2 8-10 10"/></svg>
+      <svg class="corner br" viewBox="0 0 60 60" aria-hidden="true"><path d="M2 58V14Q2 2 14 2h44M10 50V20q0-10 10-10h30M14 30q8-2 10-10M24 14q-2 8-10 10"/></svg>
+      <p id="cele-venue" class="cele-venue"></p>
+      <p id="cele-address" class="cele-address"></p>
+      <p id="cele-when" class="cele-when"></p>
+      <a id="map-link" class="map-btn" target="_blank" rel="noopener" data-t="map" hidden></a>
+    </div>
+  </section>
+
+  <!-- the day -->
+  <section class="day">
+    <div class="day-strip" aria-hidden="true" data-reveal></div>
+    <h2 class="title" data-t="dayTitle" data-reveal></h2>
+    <p id="day-sub" class="smallcaps" data-reveal></p>
+    <ul id="datestrip" class="datestrip" data-reveal></ul>
+    <ol id="timeline" class="timeline"></ol>
+  </section>
+
+  <!-- footer -->
+  <footer class="foot">
+    <div class="tiles" aria-hidden="true"></div>
+    <div class="birds-home" aria-hidden="true" data-reveal></div>
+    <p class="foot-line" data-t="footer" data-reveal></p>
+    <p class="signature" data-reveal>Isaac &amp; Dodo</p>
+    <p class="hashtag" data-reveal>#IDoDodo</p>
+  </footer>
+</main>
+
+</body>
+</html>
