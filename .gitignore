@@ -1,2 +1,2 @@
-src/invite-cards.html
-src/__pycache__/
+**/src/invite-cards.html
+__pycache__/
