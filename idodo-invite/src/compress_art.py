@@ -19,7 +19,6 @@ OUT = HERE.parent / "art"
 SIZES = {
     "envelope": 1920,
     "card-frame": 1920,
-    "card-wide": 1920,
     "garden": 1440,
     "clouds": 1600,
     "blossoms": 360,

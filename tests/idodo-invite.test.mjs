@@ -206,13 +206,11 @@ test('11. the page asks search engines not to index it', withDom('', undefined, 
   assert.match(doc.querySelector('meta[name="robots"]').content, /noindex/);
 }));
 
-// 13. the envelope is wide, like a real one
-test('13. stage, ribbon, bow and tap hint all sit on one envelope box', withDom('', undefined, (win, doc) => {
-  const box = doc.querySelector('#envelope > .env-box');
-  assert.ok(box, 'there is an .env-box inside #envelope');
-  for (const sel of ['.env-stage', '.ribbon-wrap', '.bow-wrap', '.tap']) {
-    assert.ok(box.querySelector(sel), `${sel} is inside .env-box`);
-  }
+// 13–14. the envelope stands upright like in the reel; its top flap is a separate sheet of paper
+test('14. the top flap is light paper with a blossom branch and two birds, not the painting', withDom('', undefined, (win, doc) => {
+  const flap = doc.querySelector('.flap-top .face.front');
+  assert.ok(flap.querySelector('.flap-blossom'), 'a blossom branch on the flap');
+  assert.ok(flap.querySelector('.flap-birds'), 'two birds on the flap');
 }));
 
 // Replace Image so the test can see which paintings the page asks for, and finish loading them by hand.
@@ -226,24 +224,25 @@ function recordImages(list) {
   };
 }
 
-test('13. the page uses the wide paintings and shows the envelope once the wide one has loaded', async () => {
+test('13. the page uses the upright paintings and shows the envelope once that one has loaded', async () => {
   const images = [];
   const dom = await open('', undefined, recordImages(images));
   const root = dom.window.document.documentElement;
   try {
     const urls = images.map((img) => img.src);
-    assert.ok(urls.includes('art/envelope-wide.webp'), 'asks for the wide envelope');
-    assert.ok(urls.includes('art/card-wide.webp'), 'asks for the wide card');
+    assert.ok(urls.includes('art/envelope.webp'), 'asks for the upright envelope');
+    assert.ok(urls.includes('art/card-frame.webp'), 'asks for the upright card');
+    assert.ok(!urls.some((url) => url.includes('-wide')), 'no wide paintings');
     assert.ok(!root.classList.contains('art-ready'), 'waits for the painting');
-    images.find((img) => img.src === 'art/envelope-wide.webp').onload();
-    assert.ok(root.classList.contains('art-envelope-wide'));
+    images.find((img) => img.src === 'art/envelope.webp').onload();
+    assert.ok(root.classList.contains('art-envelope'));
     assert.ok(root.classList.contains('art-ready'));
   } finally {
     dom.window.close();
   }
 });
 
-test('13. every painting the stylesheet waits for is one the page loads', async () => {
+test('15. every painting the stylesheet waits for is one the page loads', async () => {
   const css = await readFile(path.join(path.dirname(PAGE), 'style.css'), 'utf8');
   const wanted = new Set([...css.matchAll(/\.art-([a-z-]+)/g)].map((m) => m[1]).filter((name) => name !== 'ready'));
   const images = [];
