@@ -41,30 +41,76 @@
 
 <!-- the envelope -->
 <div id="envelope" class="envelope" role="button" tabindex="0">
-  <div class="env-inside" aria-hidden="true"></div>
-  <div class="flap flap-left" aria-hidden="true"></div>
-  <div class="flap flap-right" aria-hidden="true"></div>
-  <div class="flap flap-bottom" aria-hidden="true"></div>
-  <div class="flap flap-top" aria-hidden="true"><i class="face front"></i><i class="face back"></i></div>
-  <svg class="seams" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0 0 L50 52 L100 0 M0 100 L50 47 L100 100"/>
-    <path class="hi" d="M0 0 L50 52 L100 0 M0 100 L50 47 L100 100"/>
-  </svg>
-  <div class="ribbon" aria-hidden="true"><i class="r-top"></i><i class="r-bottom"></i></div>
-  <svg class="bow" viewBox="0 0 200 150" aria-hidden="true">
-    <defs>
-      <linearGradient id="satin" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F3EEF4"/><stop offset="1" stop-color="#D9D0DD"/>
-      </linearGradient>
-    </defs>
-    <path d="M100 62 C70 20 18 18 22 52 C26 82 70 82 100 70 Z" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
-    <path d="M100 62 C130 20 182 18 178 52 C174 82 130 82 100 70 Z" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
-    <path d="M94 74 C80 98 66 122 58 146 L76 140 L84 150 C90 124 98 100 104 76 Z" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
-    <path d="M106 74 C120 98 134 122 142 146 L124 140 L116 150 C110 124 102 100 96 76 Z" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
-    <path d="M44 46 C58 40 76 48 90 60" fill="none" stroke="#E2DAE6" stroke-width="2" stroke-linecap="round"/>
-    <path d="M156 46 C142 40 124 48 110 60" fill="none" stroke="#E2DAE6" stroke-width="2" stroke-linecap="round"/>
-    <rect x="88" y="56" width="24" height="22" rx="9" fill="url(#satin)" stroke="#CFC4D4" stroke-width="1.5"/>
-  </svg>
+  <div class="env-stage" aria-hidden="true">
+    <!-- inside of the envelope, and the card waiting in it -->
+    <div class="env-pocket"></div>
+    <div class="env-card frame-art"></div>
+    <!-- front flaps: sides first, bottom over them -->
+    <div class="env-front">
+      <div class="fw fw-left"><i class="flap flap-left"></i></div>
+      <div class="fw fw-right"><i class="flap flap-right"></i></div>
+      <div class="fw fw-bottom"><i class="flap flap-bottom"></i>
+        <svg class="edge" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 100 L50 47 L100 100"/></svg>
+      </div>
+    </div>
+    <!-- top flap: its shadow, then the flap itself (folds up in 3D) -->
+    <div class="top-shadow"><i></i></div>
+    <div class="flap-top">
+      <i class="face front"><svg class="edge" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0 L50 52 L100 0"/></svg></i>
+      <i class="face back"></i>
+    </div>
+  </div>
+
+  <!-- the ribbon: two halves that slide apart, and the bow on top -->
+  <div class="ribbon-wrap" aria-hidden="true">
+    <div class="ribbon"><i class="r-half r-top"></i><i class="r-half r-bottom"></i></div>
+  </div>
+  <div class="bow-wrap" aria-hidden="true">
+    <div class="bow-art"></div>
+    <svg class="bow-svg" viewBox="0 0 240 170">
+      <defs>
+        <linearGradient id="satinA" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#F7F3F9"/><stop offset=".8" stop-color="#E6DEEA"/><stop offset="1" stop-color="#D5CBDB"/>
+        </linearGradient>
+        <linearGradient id="satinB" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#FDFBFE"/><stop offset=".6" stop-color="#EEE8F1"/><stop offset="1" stop-color="#D9CFDF"/>
+        </linearGradient>
+        <radialGradient id="loopShade" cx=".72" cy=".55" r=".75">
+          <stop offset="0" stop-color="#A99DB6" stop-opacity=".85"/><stop offset=".55" stop-color="#CFC5D8" stop-opacity=".5"/><stop offset="1" stop-color="#EDE8F1" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="knotG" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#ECE5EF"/><stop offset="1" stop-color="#CBBFD3"/>
+        </linearGradient>
+        <filter id="fabric" x="-6%" y="-6%" width="112%" height="112%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04 0.7" numOctaves="2" seed="4" result="t"/>
+          <feDisplacementMap in="SourceGraphic" in2="t" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="d"/>
+          <feTurbulence type="fractalNoise" baseFrequency="1.5 0.1" numOctaves="1" seed="9" result="w"/>
+          <feColorMatrix in="w" type="matrix" values="0 0 0 0 .42  0 0 0 0 .38  0 0 0 0 .48  0 0 0 .14 0" result="wt"/>
+          <feComposite in="wt" in2="d" operator="in" result="wm"/>
+          <feMerge><feMergeNode in="d"/><feMergeNode in="wm"/></feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#fabric)">
+        <path class="bow-tail" d="M110 78 C100 98 84 120 64 150 L80 147 L86 162 C100 132 114 106 122 82 Z" fill="url(#satinB)"/>
+        <path class="bow-tail" d="M130 78 C140 100 152 124 168 156 L152 152 L148 166 C136 136 124 108 118 82 Z" fill="url(#satinB)"/>
+        <g class="bow-loop">
+          <path d="M114 62 C98 40 66 22 42 30 C22 37 16 60 28 78 C40 96 80 92 114 80 Z" fill="url(#satinA)"/>
+          <path d="M110 66 C96 52 70 44 54 50 C44 55 46 68 58 74 C74 82 96 78 110 74 Z" fill="url(#loopShade)"/>
+          <path d="M106 62 C88 44 60 34 40 42" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>
+          <path d="M30 76 C48 90 84 88 110 78" fill="none" stroke="#C9BED1" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>
+        </g>
+        <g class="bow-loop" transform="matrix(-1 0 0 1 240 0)">
+          <path d="M114 62 C98 40 66 22 42 30 C22 37 16 60 28 78 C40 96 80 92 114 80 Z" fill="url(#satinA)"/>
+          <path d="M110 66 C96 52 70 44 54 50 C44 55 46 68 58 74 C74 82 96 78 110 74 Z" fill="url(#loopShade)"/>
+          <path d="M106 62 C88 44 60 34 40 42" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>
+          <path d="M30 76 C48 90 84 88 110 78" fill="none" stroke="#C9BED1" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>
+        </g>
+        <path d="M106 58 C112 52 128 52 134 58 C139 66 138 80 132 86 C124 91 114 90 108 85 C102 78 101 66 106 58 Z" fill="url(#knotG)"/>
+        <path d="M112 60 C116 70 115 80 111 86 M126 58 C128 68 128 78 124 88" fill="none" stroke="#C4B8CC" stroke-width="1.2" stroke-linecap="round" opacity=".75"/>
+      </g>
+    </svg>
+  </div>
+
   <p class="tap"><span data-t="tapToOpen"></span></p>
 </div>
 
@@ -72,7 +118,7 @@
 
   <!-- hero -->
   <section class="hero">
-    <div class="hero-frame" aria-hidden="true"></div>
+    <div class="hero-frame frame-art" aria-hidden="true"></div>
     <div class="petals" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="hero-body">
       <p id="hero-eyebrow" class="smallcaps" data-t="eyebrow" data-reveal></p>

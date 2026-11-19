@@ -22,6 +22,10 @@
   --col: 480px;
   --gutter: max(12px, calc((100vw - var(--col)) / 2 + 12px));
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .25 0 0 0 0 .35 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* handmade-paper relief: noise lit from the upper left */
+  --paper-tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.04' numOctaves='5' seed='11' stitchTiles='stitch'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1.5'%3E%3CfeDistantLight azimuth='235' elevation='55'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+  /* ribbon edges: a strip whose sides are pushed around by fine noise, so the satin looks cut and slightly frayed */
+  --fray: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='240' viewBox='0 0 60 240' preserveAspectRatio='none'%3E%3Cfilter id='f' x='-20%25' y='0' width='140%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.02 .9' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='2.5' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='3' y='-20' width='54' height='280' fill='%23fff' filter='url(%23f)'/%3E%3C/svg%3E");
   --heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 30'%3E%3Cpath d='M16 29C6 21 1 15.5 1 9.5A8 8 0 0 1 16 5a8 8 0 0 1 15 4.5C31 15.5 26 21 16 29z' fill='%233A3345'/%3E%3C/svg%3E");
   --birds-sketch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 50'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 24q8-10 16-2q8-9 17 0'/%3E%3Cpath d='M40 12q7-9 14-2q7-8 15 0'/%3E%3C/g%3E%3Cg fill='none' stroke='%235F7FC4' stroke-width='1.2' stroke-linecap='round' opacity='.6'%3E%3Cpath d='M6 24q8-10 16-2q8-9 17 0'/%3E%3Cpath d='M40 12q7-9 14-2q7-8 15 0'/%3E%3C/g%3E%3C/svg%3E");
 }
@@ -124,9 +128,16 @@ section { position: relative; padding: 76px 30px; text-align: center; }
 .music .wave { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; opacity: .25; }
 .music[aria-pressed="true"] .wave { opacity: 1; animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .4; } }
-body.sealed .music { opacity: 0; pointer-events: none; }
 
-/* ---------- envelope ---------- */
+/* ---------- envelope ----------
+ * Timeline after a tap (matches the reference reel):
+ *   0.00–0.95  the bow unties (shrinks into its knot)
+ *   0.55–1.45  the two ribbon halves slide apart along the ribbon and blur away
+ *   1.00–3.40  the top flap lifts toward you, stands up for a while, then folds back; its shadow spreads
+ *   2.80–4.40  the card rises out of the pocket while the front flaps sweep past the camera
+ *   4.10–4.60  the envelope fades into the identical card underneath
+ *   4.40–5.50  the text on the card appears
+ */
 .envelope {
   position: fixed;
   z-index: 50;
@@ -136,11 +147,71 @@ body.sealed .music { opacity: 0; pointer-events: none; }
   overflow: hidden;
   cursor: pointer;
   outline: none;
-  perspective: 1600px;
-  transition: visibility 0s linear 2.4s;
+  background: var(--paper-lo);
+  transition: opacity .5s ease 4.1s, visibility 0s linear 4.6s;
 }
-.envelope:focus-visible .tap span { outline: 2px solid var(--paper-hi); outline-offset: 4px; }
-.opened .envelope { visibility: hidden; pointer-events: none; }
+.opened .envelope { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* until the painting has loaded, show plain paper instead of a half-drawn envelope */
+.env-stage, .ribbon-wrap, .bow-wrap { transition: opacity .9s ease; }
+html:not(.art-ready) .env-stage,
+html:not(.art-ready) .ribbon-wrap,
+html:not(.art-ready) .bow-wrap { opacity: 0; }
+
+.env-stage { position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 35%; }
+
+/* inside of the envelope: shaded paper, darkest deep in the pocket */
+.env-pocket {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(75% 42% at 50% 50%, rgba(40, 34, 52, .32), transparent 72%),
+    linear-gradient(180deg, #D8CFDE, #C7BCCF);
+  transition: opacity 1s ease 3.1s;
+}
+.env-pocket::after, .flap::after, .flap-top .face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--paper-tex);
+  mix-blend-mode: soft-light;
+  opacity: .7;
+  pointer-events: none;
+}
+.opened .env-pocket { opacity: 0; }
+
+/* the card waits a little lower and smaller inside, in the shade */
+.env-card {
+  position: absolute;
+  inset: 0;
+  transform: translateY(12%) scale(.86);
+  transform-origin: 50% 0;
+  box-shadow: 0 -1px 8px rgba(40, 28, 60, .2);
+  transition: transform 1.6s cubic-bezier(.3, 0, .15, 1) 2.8s, box-shadow 1s ease 3.1s;
+}
+.env-card::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(40, 34, 52, .22), rgba(40, 34, 52, .52));
+  transition: opacity 1.3s ease 2.95s;
+}
+.opened .env-card { transform: none; box-shadow: none; }
+.opened .env-card::before { opacity: 0; }
+
+/* front flaps: each casts a soft shadow, so the envelope has real paper edges */
+.env-front {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 64%;
+  transition: transform 1.6s cubic-bezier(.55, 0, .35, 1) 2.8s, opacity 1.1s ease 3.25s;
+}
+.opened .env-front { transform: scale(1.55); opacity: 0; }
+.fw { position: absolute; inset: 0; }
+.fw-left { filter: drop-shadow(3px 0 3px rgba(40, 28, 60, .3)); }
+.fw-right { filter: drop-shadow(-3px 0 3px rgba(40, 28, 60, .3)); }
+.fw-bottom { filter: drop-shadow(0 -3px 4px rgba(40, 28, 60, .32)); }
 
 /* every flap shows the same painting, so together they read as one picture */
 .flap, .flap-top .face.front {
@@ -156,25 +227,37 @@ body.sealed .music { opacity: 0; pointer-events: none; }
 .art-envelope .flap, .art-envelope .flap-top .face.front {
   background: url("art/envelope.webp") center / cover no-repeat;
 }
-.flap { transition: transform 1s var(--ease) 1.25s, opacity .6s ease 1.6s; }
-.flap-left { clip-path: polygon(0 0, 52% 50%, 0 100%); }
-.flap-right { clip-path: polygon(100% 0, 48% 50%, 100% 100%); }
+.flap-left { clip-path: polygon(0 0, 51% 50%, 0 100%); }
+.flap-right { clip-path: polygon(100% 0, 49% 50%, 100% 100%); }
 .flap-bottom { clip-path: polygon(0 100%, 50% 47%, 100% 100%); }
-.flap-left::after, .flap-right::after, .flap-bottom::after {
-  content: "";
+/* light comes from the upper left */
+.flap::before, .flap-top .face.front::before { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.flap-left::before { background: linear-gradient(90deg, rgba(255, 255, 255, .05), rgba(40, 28, 60, .05)); }
+.flap-right::before { background: linear-gradient(270deg, rgba(40, 28, 60, .12), transparent 55%); }
+.flap-bottom::before { background: linear-gradient(0deg, rgba(255, 255, 255, .04), rgba(40, 28, 60, .07)); }
+.flap-top .face.front::before { background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(40, 28, 60, .04)); }
+
+/* a hair-thin lit paper edge along the flap folds */
+.edge { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.edge path { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+
+/* top flap: lifts toward the viewer around its top edge, then folds back out of view */
+.top-shadow {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(40, 30, 60, .1), transparent 40%);
+  filter: blur(3px);
+  transform: translateY(3px);
+  transform-origin: 50% 0;
+  transition: filter 1.4s ease 1s, opacity 1.2s ease 1.5s, transform 1.4s ease 1s;
 }
-.flap-right::after { background: linear-gradient(270deg, rgba(40, 30, 60, .1), transparent 40%); }
-.flap-bottom::after { background: linear-gradient(0deg, transparent 60%, rgba(40, 30, 60, .14)); }
+.top-shadow i { position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 54%); background: rgba(32, 28, 40, .46); }
+.opened .top-shadow { filter: blur(20px); opacity: 0; transform: translateY(4%) scaleY(1.08); }
+
 .flap-top {
   position: absolute;
   inset: 0;
-  z-index: 2;
   transform-origin: 50% 0;
   transform-style: preserve-3d;
-  transition: transform 1.05s cubic-bezier(.5, 0, .2, 1) .55s, opacity .4s ease 1.35s;
 }
 .flap-top .face {
   position: absolute;
@@ -185,69 +268,130 @@ body.sealed .music { opacity: 0; pointer-events: none; }
 }
 .flap-top .face.back {
   transform: rotateX(180deg);
-  background: linear-gradient(180deg, var(--paper-lo), var(--paper)) ;
+  background: linear-gradient(0deg, #F4F0F6, #E2D9E7);
 }
-.seams { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; transition: opacity .3s ease .5s; }
-.seams path { fill: none; stroke: rgba(40, 30, 60, .5); stroke-width: 1.2; vector-effect: non-scaling-stroke; filter: blur(.6px); }
-.seams path.hi { stroke: rgba(255, 255, 255, .55); stroke-width: 1; transform: translateY(.25px); }
+.opened .flap-top { animation: flap-open 2.4s linear 1s both; }
+/* lifts quickly, stands nearly upright for a beat, then folds over and away */
+@keyframes flap-open {
+  0% { transform: none; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  62% { transform: rotateX(78deg); animation-timing-function: cubic-bezier(.5, 0, .7, .4); }
+  85% { transform: rotateX(100deg); opacity: 1; animation-timing-function: ease-in; }
+  100% { transform: rotateX(180deg); opacity: 0; }
+}
 
-.ribbon { position: absolute; z-index: 4; top: -6%; bottom: -6%; left: calc(50% - 21px); width: 42px; transform: rotate(-7deg); }
-.ribbon i {
+/* ribbon: sheer satin with frayed edges, laid diagonally across the envelope */
+.ribbon-wrap {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 1.5px 2px rgba(40, 28, 60, .3));
+}
+.ribbon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(46px, 13%);
+  height: 150%;
+  transform: translate(-50%, -50%) rotate(24deg);
+}
+.r-half {
   position: absolute;
   left: 0;
   right: 0;
   height: 50%;
-  background: linear-gradient(90deg, #DCD3E0, #FFF 30%, #F6F2F7 58%, #D3C8D9);
-  box-shadow: 0 0 12px rgba(40, 30, 60, .2);
-  transition: transform .9s var(--ease) .2s;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(0deg, transparent 0, rgba(255, 255, 255, .16) 70px, transparent 140px, rgba(80, 64, 100, .08) 210px, transparent 280px),
+    repeating-linear-gradient(90deg, rgba(110, 92, 130, .08) 0 1px, transparent 1px 2.5px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .12) 0 1px, transparent 1px 2px),
+    linear-gradient(90deg, rgba(204, 190, 204, .94) 0%, rgba(250, 245, 243, .97) 3.5%, rgba(236, 227, 231, .96) 9%, rgba(248, 242, 240, .97) 30%, rgba(230, 220, 227, .96) 52%, rgba(249, 244, 242, .97) 72%, rgba(226, 216, 224, .96) 91%, rgba(250, 245, 243, .96) 96.5%, rgba(200, 186, 202, .94) 100%);
+  -webkit-mask: var(--fray) 0 0 / 100% 240px repeat-y;
+  mask: var(--fray) 0 0 / 100% 240px repeat-y;
+  transition: transform .9s cubic-bezier(.55, 0, .35, 1) .55s, opacity .55s ease .85s, filter .9s ease .55s;
 }
-.ribbon .r-top { top: 0; }
-.ribbon .r-bottom { bottom: 0; }
-.bow {
+.r-top { top: 0; }
+.r-bottom { bottom: 0; }
+/* a slow glint travels along the satin to invite a tap */
+.r-half::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 42%, rgba(255, 255, 255, .45) 50%, transparent 58%) 0 0 / 100% 300% no-repeat;
+  animation: glint 5s ease-in-out infinite;
+}
+.r-bottom::after { animation-delay: .9s; }
+@keyframes glint { 0% { background-position: 0 115%; } 55%, 100% { background-position: 0 -15%; } }
+.opened .r-top { transform: translateY(-58%); opacity: 0; filter: blur(4px); }
+.opened .r-bottom { transform: translateY(58%); opacity: 0; filter: blur(4px); }
+
+/* bow: sits where the flap meets the ribbon */
+.bow-wrap {
   position: absolute;
   z-index: 5;
   left: 50%;
   top: 50%;
-  width: 156px;
-  transform: translate(-50%, -58%);
-  filter: drop-shadow(0 8px 12px rgba(40, 30, 60, .28));
-  animation: breathe 3.2s ease-in-out infinite;
-  transition: opacity .45s ease, scale .5s var(--ease);
+  /* bow.webp is 720×672; its knot sits at 49% across, 28% down — that point goes on the ribbon */
+  width: min(48%, 220px);
+  aspect-ratio: 720 / 672;
+  transform: translate(-49%, -28%) rotate(20deg);
+  transform-origin: 49% 28%;
+  filter: drop-shadow(0 6px 7px rgba(40, 28, 60, .3)) drop-shadow(0 1px 1px rgba(40, 28, 60, .25));
+  pointer-events: none;
 }
-@keyframes breathe { 50% { scale: 1.035; } }
+.bow-svg, .bow-art { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: 49% 28%; }
+.bow-art { display: none; background: url("art/bow.webp") center / contain no-repeat; }
+.art-bow .bow-art { display: block; }
+.art-bow .bow-svg { display: none; }
+.opened .bow-svg, .opened .bow-art { animation: untie .95s cubic-bezier(.5, 0, .4, 1) forwards; }
+@keyframes untie {
+  0% { transform: none; opacity: 1; filter: none; }
+  45% { transform: scale(.84, .66) rotate(-5deg); opacity: 1; filter: none; }
+  100% { transform: scale(.22) rotate(-16deg); opacity: 0; filter: blur(3px); }
+}
+
+/* tap hint: quiet text with a ripple, appears after a moment */
 .tap {
   position: absolute;
   z-index: 6;
   left: 0;
   right: 0;
-  bottom: calc(8svh + env(safe-area-inset-bottom));
+  bottom: calc(7svh + env(safe-area-inset-bottom));
   text-align: center;
-  transition: opacity .3s ease;
+  opacity: 0;
+  animation: fade-in 1s ease 1.4s forwards;
+  pointer-events: none;
 }
 .tap span {
-  display: inline-block;
-  padding: 8px 20px;
-  border-radius: 999px;
-  background: rgba(248, 245, 249, .82);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-left: .42em;
   font-family: var(--serif);
-  font-size: 14px;
-  letter-spacing: .28em;
-  color: var(--ink);
-  animation: nudge 2.4s ease-in-out infinite;
+  font-size: 13px;
+  letter-spacing: .42em;
+  color: #FFF;
+  text-shadow: 0 1px 8px rgba(18, 28, 70, .6), 0 0 2px rgba(18, 28, 70, .45);
 }
-@keyframes nudge { 50% { translate: 0 -4px; } }
+.tap span::before {
+  content: "";
+  width: 30px;
+  height: 30px;
+  margin-left: -.42em;
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(18, 28, 70, .3);
+  animation: ripple 2.6s ease-out infinite;
+}
+.envelope:focus-visible .tap span::before { border-width: 2px; }
+@keyframes fade-in { to { opacity: 1; } }
+@keyframes ripple { 0% { scale: .55; opacity: .95; } 100% { scale: 1.6; opacity: 0; } }
+.opened .tap { animation: none; opacity: 0; transition: opacity .25s ease; }
 
-/* opening: bow lets go, ribbon slides off, top flap folds up, the rest slides away */
-.opened .bow { opacity: 0; scale: .55; animation: none; }
-.opened .tap, .opened .seams { opacity: 0; }
-.opened .ribbon .r-top { transform: translateY(-115%); }
-.opened .ribbon .r-bottom { transform: translateY(115%); }
-.opened .flap-top { transform: rotateX(176deg); opacity: 0; }
-.opened .flap-left { transform: translateX(-105%); }
-.opened .flap-right { transform: translateX(105%); }
-.opened .flap-bottom { transform: translateY(100%); opacity: 0; }
+/* language toggle and music button wait until the card is out */
+.lang, .music { transition: opacity .6s ease 4.6s, visibility 0s linear 4.6s; }
+.sealed .lang, .sealed .music { opacity: 0; visibility: hidden; transition: none; }
 
 /* ---------- reveal ---------- */
 [data-reveal] {
@@ -258,12 +402,12 @@ body.sealed .music { opacity: 0; pointer-events: none; }
 }
 [data-reveal].in { opacity: 1; transform: none; filter: none; }
 .sealed .hero [data-reveal] { opacity: 0; transform: translateY(18px); filter: blur(6px); }
-.opened:not(.hosting) .hero-body > :nth-child(1) { transition-delay: 1.6s; }
-.opened:not(.hosting) .hero-body > :nth-child(2) { transition-delay: 1.75s; }
-.opened:not(.hosting) .hero-body > :nth-child(3) { transition-delay: 1.95s; }
-.opened:not(.hosting) .hero-body > :nth-child(4) { transition-delay: 2.1s; }
-.opened:not(.hosting) .hero-body > :nth-child(5) { transition-delay: 2.25s; }
-.opened:not(.hosting) .hero-body > :nth-child(6) { transition-delay: 2.4s; }
+.opened:not(.hosting) .hero-body > :nth-child(1) { transition-delay: 4.4s; }
+.opened:not(.hosting) .hero-body > :nth-child(2) { transition-delay: 4.55s; }
+.opened:not(.hosting) .hero-body > :nth-child(3) { transition-delay: 4.75s; }
+.opened:not(.hosting) .hero-body > :nth-child(4) { transition-delay: 4.9s; }
+.opened:not(.hosting) .hero-body > :nth-child(5) { transition-delay: 5.05s; }
+.opened:not(.hosting) .hero-body > :nth-child(6) { transition-delay: 5.2s; }
 
 /* paintings wipe in like a brush stroke */
 .paint {
@@ -286,9 +430,8 @@ body.sealed .music { opacity: 0; pointer-events: none; }
   justify-content: center;
   padding: 19svh 40px 17svh;
 }
-.hero-frame {
-  position: absolute;
-  inset: 0;
+.hero-frame, .env-card { position: absolute; inset: 0; }
+.frame-art {
   background:
     radial-gradient(ellipse 72% 50% at 50% 50%, var(--paper) 62%, rgba(239, 234, 242, 0) 100%),
     radial-gradient(circle at 14% 5%, #FFF 0 9px, transparent 10px),
@@ -297,8 +440,8 @@ body.sealed .music { opacity: 0; pointer-events: none; }
     radial-gradient(circle at 28% 4%, #7E8F5A 0 10px, transparent 11px),
     linear-gradient(180deg, #8EA6DB 0%, #BACBEB 13%, var(--paper) 28%, var(--paper) 72%, #8FA7D8 83%, #3E5FB0 92%, #2F4FA3 100%);
 }
-.art-card-frame .hero-frame { background: url("art/card-frame.webp") center / cover no-repeat; }
-.hero-frame::after {
+.art-card-frame .frame-art { background: url("art/card-frame.webp") center / cover no-repeat; }
+.frame-art::after {
   content: "";
   position: absolute;
   inset: 0;

@@ -14,8 +14,9 @@
     'August', 'September', 'October', 'November', 'December'];
   const MAPS = 'https://www.google.com/maps/search/?api=1&query=';
   const ICONS = ['welcome', 'ceremony', 'cocktail', 'dinner', 'cake', 'dance', 'stars', 'goodnight'];
-  const ART = ['envelope', 'card-frame', 'clouds', 'garden', 'blossoms', 'birds'];
-  const OPEN_MS = 2600;
+  const ART = ['envelope', 'card-frame', 'clouds', 'garden', 'blossoms', 'birds', 'bow'];
+  const OPEN_MS = 4600; // must match the end of the opening timeline in style.css
+  const ART_WAIT_MS = 2500; // show the envelope even if its painting is slow
 
   const state = { content: null, lang: 'zh', guest: '', timer: 0 };
 
@@ -347,10 +348,18 @@
   }
 
   // Paintings switch on only once they load, so the colour stand-ins show until then.
+  // The envelope fades in when its painting is ready (or after ART_WAIT_MS at the latest).
   function loadArt() {
+    const root = document.documentElement;
+    const ready = () => root.classList.add('art-ready');
+    window.setTimeout(ready, ART_WAIT_MS);
     ART.forEach((name) => {
       const img = new Image();
-      img.onload = () => document.documentElement.classList.add(`art-${name}`);
+      img.onload = () => {
+        root.classList.add(`art-${name}`);
+        if (name === 'envelope') ready();
+      };
+      if (name === 'envelope') img.onerror = ready;
       img.src = `art/${name}.webp`;
     });
   }

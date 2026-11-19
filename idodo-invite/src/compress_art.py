@@ -23,6 +23,7 @@ SIZES = {
     "clouds": 1600,
     "blossoms": 360,
     "birds": 360,
+    "bow": 720,
     "icon-": 240,
 }
 DEFAULT = 1200
