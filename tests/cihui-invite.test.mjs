@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openPage, all, recordImages, recordTimers, runTimers, css, hideDelayMs } from './dom.mjs';
+import { openPage, all, recordImages, css, hideDelayMs } from './dom.mjs';
 
 const DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../cihui-invite');
 const PAGE = path.join(DIR, 'index.html');
@@ -23,23 +23,46 @@ const texts = (doc, sel) => [...doc.querySelectorAll(sel)].map((n) => n.textCont
 const reduce = (win) => { win.matchMedia = (q) => ({ matches: q.includes('reduce'), addEventListener() {} }); };
 const q = (params) => `?${new URLSearchParams(params)}`;
 
-// Run the recorded timers, and the ones they set in turn, until none is due within maxMs.
-function runAll(timers, maxMs) {
-  while (timers.some((t) => t.ms <= maxMs)) runTimers(timers, maxMs);
+// A clock for the page: setTimeout calls wait on it, and advance(ms) runs them in time order, each at its own
+// moment, including the ones they set in turn. (Intervals still run for real; the page only uses them for the
+// countdown and for sparkles, which need a canvas that jsdom does not have.)
+function fakeClock() {
+  const clock = { now: 0, queue: [] };
+  clock.install = (win) => {
+    win.setTimeout = (fn, ms = 0) => {
+      clock.queue.push({ fn, at: clock.now + Number(ms) });
+      return clock.queue.length;
+    };
+  };
+  clock.advance = (to) => {
+    for (;;) {
+      clock.queue.sort((a, b) => a.at - b.at);
+      const next = clock.queue[0];
+      if (!next || next.at > to) break;
+      clock.queue.shift();
+      clock.now = next.at;
+      next.fn();
+    }
+    clock.now = to;
+  };
+  return clock;
 }
+
+// jsdom never loads pictures, so the clouds start when the 3 s wait runs out, and the seal is stamped 2.7 s later.
+const LANDED_MS = 3000 + 2700;
 
 // Load the page and let the clouds close and the seal be stamped.
 async function landed(query = '', patch) {
-  const timers = [];
-  const dom = await open(query, patch, recordTimers(timers));
-  runAll(timers, 4000);
-  return { dom, doc: dom.window.document, timers };
+  const clock = fakeClock();
+  const dom = await open(query, patch, clock.install);
+  clock.advance(LANDED_MS);
+  return { dom, doc: dom.window.document, clock };
 }
 
 // 1. closed
 test('1. three paper cloud layers a side close over a seal of 慈惠道場, with the guest\'s name below', async () => {
-  const timers = [];
-  const dom = await open(q({ to: '林小美師姐' }), undefined, recordTimers(timers));
+  const clock = fakeClock();
+  const dom = await open(q({ to: '林小美師姐' }), undefined, clock.install);
   const doc = dom.window.document;
   try {
     assert.equal(doc.querySelectorAll('#sky .clouds .side.L img').length, 3);
@@ -48,30 +71,32 @@ test('1. three paper cloud layers a side close over a seal of 慈惠道場, with
     assert.equal(text(doc, '#sky .tag'), '林小美師姐 台啟');
     assert.ok(doc.body.classList.contains('sealed'));
     assert.ok(doc.querySelector('#main').hasAttribute('inert'), 'the page is inert until opened');
+    clock.advance(LANDED_MS - 1);
     assert.ok(!doc.body.classList.contains('landed'));
-    runAll(timers, 4000);
+    clock.advance(LANDED_MS);
     assert.ok(doc.body.classList.contains('landed'), 'the seal has been stamped');
   } finally {
     dom.window.close();
   }
 });
 
-test('1. the clouds start to move only once the paintings of the opening have loaded', async () => {
-  const timers = [];
+test('1. the clouds start to move once the paintings of the opening have loaded; the seal is stamped 2.7 s later', async () => {
+  const clock = fakeClock();
   const images = [];
-  const dom = await open('', undefined, all(recordTimers(timers), recordImages(images)));
+  const dom = await open('', undefined, all(clock.install, recordImages(images)));
   const doc = dom.window.document;
   try {
     const asked = images.map((img) => img.src);
     for (const name of ['cloud-front', 'cloud-mid', 'cloud-back', 'paper', 'seal-ink', 'seal-slip', 'mist-1', 'mist-2', 'mist-3']) {
-      assert.ok(asked.includes(`art/${name}.webp`), `the opening waits for art/${name}.webp`);
+      assert.ok(asked.includes(`art/${name}.webp`), `the page asks for art/${name}.webp`);
     }
-    runAll(timers, 2000);
+    clock.advance(2000);
     assert.ok(!doc.body.classList.contains('ready'), 'nothing moves while the paintings are still coming');
     images.forEach((img) => img.onload && img.onload());
     assert.ok(doc.body.classList.contains('ready'));
-    assert.ok(!doc.body.classList.contains('landed'), 'the clouds have only just started');
-    runAll(timers, 4000);
+    clock.advance(2000 + 2699);
+    assert.ok(!doc.body.classList.contains('landed'), 'the seal is not stamped yet');
+    clock.advance(2000 + 2700);
     assert.ok(doc.body.classList.contains('landed'));
   } finally {
     dom.window.close();
@@ -79,36 +104,41 @@ test('1. the clouds start to move only once the paintings of the opening have lo
 });
 
 test('1. on a slow line the clouds start anyway after 3 seconds', async () => {
-  const timers = [];
-  const dom = await open('', undefined, all(recordTimers(timers), recordImages([])));
+  const clock = fakeClock();
+  const dom = await open('', undefined, all(clock.install, recordImages([])));
   try {
-    runAll(timers, 3000);
+    clock.advance(2999);
+    assert.ok(!dom.window.document.body.classList.contains('ready'));
+    clock.advance(3000);
     assert.ok(dom.window.document.body.classList.contains('ready'));
   } finally {
     dom.window.close();
   }
 });
 
-test('1. once the seal is stamped, clicking, Enter or Space opens it', async () => {
+test('1. once the seal is stamped, clicking, Enter or Space opens it; the page behind stays locked until the opening is done', async () => {
   for (const how of ['click', 'Enter', ' ']) {
-    const { dom, doc } = await landed();
+    const { dom, doc, clock } = await landed();
     const sky = doc.querySelector('#sky');
     if (how === 'click') sky.click();
     else sky.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: how, bubbles: true }));
     assert.ok(doc.body.classList.contains('opened'), `${JSON.stringify(how)} should open`);
-    assert.ok(!doc.querySelector('#main').hasAttribute('inert'));
+    assert.ok(doc.querySelector('#main').hasAttribute('inert'), 'no tap or Tab reaches the page while the clouds part');
+    clock.advance(clock.now + 60000);
+    assert.ok(!doc.querySelector('#main').hasAttribute('inert'), 'once the opening is done, the page can be used');
     dom.window.close();
   }
 });
 
 test('1. a tap before the seal is stamped opens it as soon as it is', async () => {
-  const timers = [];
-  const dom = await open('', undefined, recordTimers(timers));
+  const clock = fakeClock();
+  const dom = await open('', undefined, clock.install);
   const doc = dom.window.document;
   try {
     doc.querySelector('#sky').click();
+    clock.advance(LANDED_MS - 1);
     assert.ok(!doc.body.classList.contains('opened'), 'waits for the seal');
-    runAll(timers, 4000);
+    clock.advance(LANDED_MS);
     assert.ok(doc.body.classList.contains('opened'));
   } finally {
     dom.window.close();
@@ -125,15 +155,15 @@ test('2. ?open=a, b or c picks how it opens; c (both together) when missing or u
   }
 });
 
-test('2. the opening layer goes away when style.css has finished with it', async () => {
-  const { dom, doc, timers } = await landed();
+test('2. the opening layer goes away exactly when style.css has finished with it', async () => {
+  const { dom, doc, clock } = await landed();
   try {
-    timers.length = 0;
+    const tapped = clock.now;
     doc.querySelector('#sky').click();
+    const openMs = hideDelayMs(await css(PAGE), '.sky');
+    clock.advance(tapped + openMs - 1);
     assert.ok(!doc.body.classList.contains('revealed'));
-    const openMs = Math.max(...timers.map((t) => t.ms));
-    assert.equal(openMs, hideDelayMs(await css(PAGE), '.sky'));
-    runTimers(timers, openMs);
+    clock.advance(tapped + openMs);
     assert.ok(doc.querySelector('#sky').hidden);
     assert.ok(doc.body.classList.contains('revealed'));
   } finally {
@@ -168,14 +198,26 @@ test('4. ?title=, ?msg= (one line each) and ?sign= replace them, as plain text',
   assert.equal(text(doc, '#hero-sign'), '慈惠道場 合十');
 }));
 
-test('4. words from the link are cut to a sensible length', withDom(q({
+test('4. words from the link are cut to what fits the card', withDom(q({
   to: '名'.repeat(80), title: '題'.repeat(20), msg: Array.from({ length: 12 }, () => '字'.repeat(60)).join('\n'),
 }), undefined, (win, doc) => {
-  assert.ok(text(doc, '#tag-to').length <= 40);
-  assert.ok(text(doc, '#hero-title').length <= 6);
+  assert.equal(text(doc, '#tag-to').length, 20);
+  assert.equal(text(doc, '#hero-title').length, 6);
   const lines = texts(doc, '#hero-text .v-line');
-  assert.ok(lines.length <= 8);
-  assert.ok(lines.every((l) => l.length <= 30));
+  assert.equal(lines.length, 6);
+  assert.ok(lines.every((l) => l.length === 22));
+}));
+
+test('4. the dojo\'s name in the words of a link is always written in full, even where a line was cut', withDom(q({
+  title: '慈惠', msg: `${'字'.repeat(20)}慈惠道場\n感恩慈惠`, sign: '慈惠 合十',
+}), undefined, (win, doc) => {
+  assert.equal(text(doc, '#hero-title'), '慈惠道場');
+  assert.deepEqual(texts(doc, '#hero-text .v-line'), [`${'字'.repeat(20)}慈惠道場`, '感恩慈惠道場']);
+  assert.equal(text(doc, '#hero-sign'), '慈惠道場 合十');
+}));
+
+test('4. a guest\'s own name is left as it is, even if it has 慈惠 in it', withDom(q({ to: '王慈惠' }), undefined, (win, doc) => {
+  assert.equal(text(doc, '#tag-to'), '王慈惠');
 }));
 
 // 5. days
@@ -236,10 +278,9 @@ test('8. address null: 地址待公布 and no map; address set: the map button s
 });
 
 // 9. deities
-test('9. the four deities of the dojo are shown, 瑤池金母 as the main one', withDom('', undefined, (win, doc) => {
-  const cards = [...doc.querySelectorAll('#deities .deity')];
-  assert.deepEqual(cards.map((c) => c.querySelector('.d-name').textContent), ['瑤池金母', '九天玄女', '中壇元帥', '福德正神']);
-  assert.equal(cards[0].querySelector('.d-role').textContent, '主祀');
+test('9. only friends are invited, so the page does not introduce the dojo\'s deities', withDom('', undefined, (win, doc) => {
+  assert.equal(doc.querySelector('#deities'), null);
+  assert.doesNotMatch(doc.querySelector('#main').textContent, /道場神尊|瑤池金母/);
 }));
 
 // 10. host
@@ -281,6 +322,11 @@ test('10. the link maker makes one link per name, carrying the opening and only 
     assert.equal(links[0].searchParams.get('sign'), '慈惠道場 合十');
     assert.equal(links[0].searchParams.get('msg'), '謹訂於臘月初八\n恭請蒞臨');
     assert.ok(!links[0].searchParams.has('title'));
+
+    doc.querySelector('#host-sign').value = '慈惠 合十';
+    doc.querySelector('#host-make').click();
+    links = [...doc.querySelectorAll('#host-links input')].map((i) => new URL(i.value));
+    assert.equal(links[0].searchParams.get('sign'), '慈惠道場 合十', 'the link maker writes the full name too');
   } finally {
     host.window.close();
   }

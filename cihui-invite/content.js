@@ -36,14 +36,6 @@ window.CIHUI_CONTENT = {
   // 道場網站
   site: 'https://tx-huang.github.io/cihui-website/',
 
-  // 道場神尊
-  deities: [
-    { key: 'jinmu', name: '瑤池金母', role: '主祀' },
-    { key: 'xuannu', name: '九天玄女', role: '陪祀' },
-    { key: 'nezha', name: '中壇元帥', role: '陪祀' },
-    { key: 'tudi', name: '福德正神', role: '陪祀' },
-  ],
-
   // 畫面上固定的字
   text: {
     tapToOpen: '輕觸開啟',
@@ -69,7 +61,6 @@ window.CIHUI_CONTENT = {
     seconds: '秒',
     programTitle: '法會流程',
     programTba: '流程待公布',
-    deitiesTitle: '道場神尊',
     siteLink: '慈惠道場網站',
     hostTitle: '做給每位大德的專屬連結',
     hostLead: '選好開場、改好邀請函上的字，再把名字一行一個貼進來，按「產生連結」。對方點開自己的連結，就會看到寫著他名字的邀請函。',

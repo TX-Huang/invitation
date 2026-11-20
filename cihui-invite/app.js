@@ -1,8 +1,9 @@
 /*
  * 慈惠道場 堂慶 invitation: paper-cut clouds closed over a seal of 慈惠道場; tap, and they open one of three ways
- * (?open=a 雲散霧開, b 金光法陣, c both). Then the invitation, dates, countdown, program, place, the dojo's deities,
- * and the host's link maker (?host). Words come from content.js; a link can change the guest's name (?to=), the
+ * (?open=a 雲散霧開, b 金光法陣, c both). Then the invitation, dates, countdown, program, place, and the host's
+ * link maker (?host). Words come from content.js; a link can change the guest's name (?to=), the
  * big title (?title=), the lines of the invitation (?msg=, one per line) and the signature (?sign=).
+ * Only friends are invited, so it does not introduce the dojo or its deities.
  */
 (function () {
   'use strict';
@@ -19,7 +20,8 @@
   const READY_CAP_MS = 3000; // on a slow line, start anyway after this long
   const DELIVERY_MS = 2700; // the clouds have closed and the seal is stamped: matches style.css
   const OPEN_MS = 5000; // the opening layer is done: must match the .sky hide delay in style.css
-  const LIMIT = { name: 40, title: 6, lines: 8, line: 30, sign: 20 };
+  const LIMIT = { name: 20, title: 6, lines: 6, line: 22, sign: 20 };
+  const CHARS_PER_COLUMN = 11; // the invitation's vertical lines hold about this many characters before wrapping
 
   const state = { content: null, guest: '', opening: 'c', words: null, timer: 0, wantsOpen: false };
 
@@ -94,6 +96,12 @@
 
   const clip = (s, n) => [...(s || '').trim()].slice(0, n).join('');
 
+  // The dojo is always 慈惠道場, never 慈惠 alone; cutting a line can leave 慈惠, so this runs after clip.
+  // (A guest's own name is left alone: a person may well be called 慈惠.)
+  const fullName = (s) => s.replace(/慈惠(?!道場)/g, '慈惠道場');
+  const clipWords = (s, n) => fullName(clip(s, n));
+  const linesOf = (s) => (s || '').split('\n').map((l) => clipWords(l, LIMIT.line)).filter(Boolean).slice(0, LIMIT.lines);
+
   function defaultWords() {
     const c = state.content;
     return {
@@ -105,9 +113,9 @@
 
   function linkWords(params) {
     const words = defaultWords();
-    const title = clip(params.get('title'), LIMIT.title);
-    const sign = clip(params.get('sign'), LIMIT.sign);
-    const lines = (params.get('msg') || '').split('\n').map((l) => clip(l, LIMIT.line)).filter(Boolean).slice(0, LIMIT.lines);
+    const title = clipWords(params.get('title'), LIMIT.title);
+    const sign = clipWords(params.get('sign'), LIMIT.sign);
+    const lines = linesOf(params.get('msg'));
     if (title) words.title = title;
     if (sign) words.sign = sign;
     if (lines.length) words.lines = lines;
@@ -137,7 +145,11 @@
     lines.forEach((line) => box.insertBefore(el('p', 'v-line', line), $('#hero-sign')));
     $('#hero-sign').textContent = sign;
     // the lines come in one after another (style.css staggers them by --i)
-    box.querySelectorAll('p').forEach((p, i) => p.style.setProperty('--i', i));
+    const all = [...box.querySelectorAll('p')];
+    all.forEach((p, i) => p.style.setProperty('--i', i));
+    // long words wrap into more columns; style.css makes the text smaller so they all fit on the screen
+    const columns = all.reduce((n, p) => n + Math.max(1, Math.ceil([...p.textContent].length / CHARS_PER_COLUMN)), 0);
+    box.style.setProperty('--cols', columns);
   }
 
   function renderDates() {
@@ -185,21 +197,6 @@
     });
   }
 
-  function renderDeities() {
-    const list = $('#deities');
-    list.textContent = '';
-    state.content.deities.forEach((deity) => {
-      const li = el('li', `deity${deity.role === '主祀' ? ' main' : ''}`);
-      li.dataset.reveal = '';
-      const img = el('img', 'd-img');
-      img.src = `art/deity-${deity.key}.webp`;
-      img.alt = '';
-      img.loading = 'lazy';
-      li.append(img, el('span', 'd-role', deity.role), el('span', 'd-name', deity.name));
-      list.append(li);
-    });
-  }
-
   function updateCountdown() {
     const parts = countdownParts(target(), Date.now());
     const ahead = parts.state === 'ahead';
@@ -219,7 +216,6 @@
     renderDates();
     renderPlace();
     renderProgram();
-    renderDeities();
     updateCountdown();
   }
 
@@ -247,6 +243,7 @@
       const right = side.classList.contains('R');
       const img = side.querySelector('img');
       const mover = side.querySelector('.mover');
+      img.style.height = `${h}px`;
       img.style.left = `${cx - layer.reach - layer.tip * h * ASPECT}px`;
       img.style.translate = `0 calc(-50% + ${right ? layer.shift * (h / layer.heads) : 0}px)`;
       mover.style.setProperty('--dx', `${layer.dx * w}px`);
@@ -506,10 +503,12 @@
     return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  // The opening layer is done: the page can scroll.
+  // The opening layer is done: the page can be scrolled and used.
   function reveal() {
     $('#sky').hidden = true;
     document.body.classList.add('revealed');
+    $('#main').removeAttribute('inert');
+    $('#main').focus({ preventScroll: true });
   }
 
   function openLetter() {
@@ -524,8 +523,6 @@
     const sky = $('#sky');
     sky.setAttribute('aria-hidden', 'true');
     sky.tabIndex = -1;
-    $('#main').removeAttribute('inert');
-    $('#main').focus({ preventScroll: true });
     if (reducedMotion()) {
       reveal();
       return;
@@ -611,9 +608,9 @@
   function changedWords() {
     const base = defaultWords();
     const typed = {
-      title: clip($('#host-title').value, LIMIT.title),
-      msg: $('#host-msg').value.split('\n').map((l) => clip(l, LIMIT.line)).filter(Boolean).slice(0, LIMIT.lines).join('\n'),
-      sign: clip($('#host-sign').value, LIMIT.sign),
+      title: clipWords($('#host-title').value, LIMIT.title),
+      msg: linesOf($('#host-msg').value).join('\n'),
+      sign: clipWords($('#host-sign').value, LIMIT.sign),
     };
     const was = { title: base.title, msg: base.lines.join('\n'), sign: base.sign };
     return Object.fromEntries(Object.entries(typed).filter(([key, value]) => value && value !== was[key]));
@@ -666,7 +663,6 @@
     document.body.classList.remove('sealed');
     document.body.classList.add('ready', 'landed', 'opened', 'hosting');
     reveal();
-    $('#main').removeAttribute('inert');
     $('#host-open').value = state.opening;
     fillWords(state.words);
     makeLinks();

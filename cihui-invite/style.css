@@ -3,7 +3,8 @@
 :root {
   --paper: #F7F3EA;
   --ink: #1D1A16;
-  --soft: rgba(29, 26, 22, .56);
+  --soft: rgba(29, 26, 22, .7);
+  --gold-text: #82622A; /* gold for words: dark enough to read on the paper */
   --gold: #B58E4F;
   --gold-hi: #E2C98F;
   --line: #DCCDB0;
@@ -62,7 +63,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   -webkit-tap-highlight-color: transparent;
   transition: visibility 0s linear 5s;
 }
-.opened .sky { visibility: hidden; pointer-events: none; }
+.opened .sky { visibility: hidden; }
+/* a visible mark when the closed card is reached with the keyboard */
+.sky:focus-visible .seal b { outline: 2px solid var(--gold-text); outline-offset: 8px; border-radius: 4px; }
 
 /* light behind the clouds, showing between the interlocking lobes */
 .glow {
@@ -130,7 +133,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-size: 17px;
   font-weight: 600;
   letter-spacing: .32em;
-  white-space: nowrap;
+  max-height: calc(100% - var(--cy) - 74px - 15%);
   background: radial-gradient(closest-side, rgba(251, 248, 242, .92), rgba(251, 248, 242, 0));
   opacity: 0;
   transition: opacity 1.2s ease 2.5s;
@@ -197,9 +200,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .open-b.opened .disk, .open-c.opened .disk { z-index: 1; animation: disk 2.2s cubic-bezier(.33, 1, .68, 1) .4s forwards, disk-fade 1s ease 1.2s forwards; }
 @keyframes disk { 0% { opacity: 0; scale: .45; } 10% { opacity: 1; } 100% { opacity: 1; scale: var(--smax); } }
 @keyframes disk-fade { to { opacity: 0; } }
-/* b only: inside the ring the clouds are gone, and they are pushed back */
-.open-b .clouds { -webkit-mask-image: radial-gradient(circle at 50% 45%, transparent calc(var(--r) - 46px), #000 calc(var(--r) - 4px)); mask-image: radial-gradient(circle at 50% 45%, transparent calc(var(--r) - 46px), #000 calc(var(--r) - 4px)); }
-.open-b.opened .clouds { animation: hole 2.2s cubic-bezier(.33, 1, .68, 1) .4s forwards; }
+/* b and c: inside the ring the clouds are gone; in b they are also pushed back */
+.open-b .clouds, .open-c .clouds { -webkit-mask-image: radial-gradient(circle at 50% 45%, transparent calc(var(--r) - 46px), #000 calc(var(--r) - 4px)); mask-image: radial-gradient(circle at 50% 45%, transparent calc(var(--r) - 46px), #000 calc(var(--r) - 4px)); }
+.open-b.opened .clouds, .open-c.opened .clouds { animation: hole 2.2s cubic-bezier(.33, 1, .68, 1) .4s forwards; }
 @keyframes hole { from { --r: 45px; } to { --r: var(--rmax); } }
 .open-b.opened .mover { animation: pushed 2.2s cubic-bezier(.33, 1, .68, 1) .45s forwards; }
 @keyframes pushed { to { transform: translateX(var(--px)) scale(1.08); } }
@@ -249,7 +252,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .stamp { position: absolute; left: calc(50% + 46px); top: calc(35% + 52px); width: 46px; height: 46px; opacity: 0; }
 .lines { position: absolute; top: 62%; left: 0; right: 0; display: flex; justify-content: center; }
-.vtext { position: relative; writing-mode: vertical-rl; height: 214px; font-size: 16px; line-height: 2.25; letter-spacing: .2em; }
+.vtext { --cols: 5; position: relative; writing-mode: vertical-rl; height: 13.4em; font-size: min(16px, calc(310px / (var(--cols) * 2.25))); line-height: 2.25; letter-spacing: .2em; }
 /* a hairline of gold foil beside the guest's line */
 .vtext::before { content: ""; position: absolute; top: 0; bottom: 0; right: -18px; width: 1.4px; background: url("art/gold-foil.webp") center / 400px; -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent); transform-origin: 50% 0; scale: 1 0; opacity: 0; }
 .vtext p { opacity: 0; translate: 0 10px; filter: blur(3px); }
@@ -258,9 +261,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-weight: 600;
   background: linear-gradient(170deg, transparent 40%, rgba(255, 250, 232, .95) 50%, transparent 60%) 0 0 / 100% 300% no-repeat, url("art/gold-foil.webp") center / 300px;
   background-position: 0 100%, center;
+  background-color: var(--gold-text);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  filter: brightness(.7) saturate(1.15);
 }
 .vtext .v-sign { padding-top: 4em; color: var(--soft); }
 .scroll-hint { position: absolute; left: 0; right: 0; bottom: max(3%, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--soft); font-size: 11px; letter-spacing: .4em; padding-left: .4em; text-decoration: none; opacity: 0; }
@@ -296,7 +301,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-size: 30px;
   font-weight: 600;
   line-height: 1.2;
-  background: url("art/gold-foil.webp") center / 220px;
+  background: url("art/gold-foil.webp") center / 220px, var(--gold-text);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -322,15 +327,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .p-day { font-size: 16px; font-weight: 600; letter-spacing: .2em; margin-bottom: 8px; }
 .p-list { list-style: none; margin: 0 auto; padding: 0; max-width: 300px; text-align: left; }
 .p-item { display: flex; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-.p-time { color: var(--gold); font-variant-numeric: tabular-nums; }
-.deities { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px 10px; align-items: end; }
-.deity { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.deity.main { grid-column: 1 / -1; }
-/* each picture is a cut-out emblem, all the same height: show it whole */
-.d-img { height: 110px; width: auto; max-width: 100%; object-fit: contain; margin-bottom: 6px; }
-.deity.main .d-img { height: 150px; }
-.d-role { font-size: 12px; color: var(--gold); letter-spacing: .3em; padding-left: .3em; }
-.d-name { font-size: 17px; letter-spacing: .2em; padding-left: .2em; }
+.p-time { color: var(--gold-text); font-variant-numeric: tabular-nums; }
 .foot { padding-bottom: 80px; }
 .foot-seal { width: 64px; height: 64px; margin: 0 auto 18px; background: url("art/seal.webp") center / contain no-repeat; mix-blend-mode: multiply; }
 .foot-sign { font-size: 18px; letter-spacing: .3em; padding-left: .3em; margin-bottom: 24px; }
@@ -354,9 +351,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 #host-reset { margin-top: 12px; }
 .host-row { display: flex; gap: 10px; margin-top: 16px; }
 .general { margin-top: 18px; font-size: 14px; color: var(--soft); }
-.link-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.link-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.link-row input { flex: 1 1 100%; min-width: 0; }
 #host-links { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
-#host-links li { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 8px; align-items: center; }
+#host-links li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 8px; align-items: center; }
+#host-links input { min-width: 0; }
 #host-links .who { grid-column: 1 / -1; font-weight: 600; }
 .hosting .hero { height: 760px; }
 
