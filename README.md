@@ -11,8 +11,8 @@ https://tx-huang.github.io/invitation/<資料夾名字>/
 | `yunan-invite/` | <https://tx-huang.github.io/invitation/yunan-invite/> | 侯畇安 週歲派對（2026/9/28） |
 | `idodo-invite/` | <https://tx-huang.github.io/invitation/idodo-invite/> | Isaac & Dodo 婚禮（日期地點待定） |
 | `idodo-invite-2/` | <https://tx-huang.github.io/invitation/idodo-invite-2/> | Isaac & Dodo 婚禮第二版：拉門 + 舞台布幕（跟第一版共用內容） |
-| `idodo-invite-3/` | <https://tx-huang.github.io/invitation/idodo-invite-3/> | Isaac & Dodo 婚禮第三版：酒紅信封 + 蠟封 + 金光（跟第一版共用內容） |
-| `cihui-invite/` | <https://tx-huang.github.io/invitation/cihui-invite/> | 慈惠道場 堂慶（2027/1/16–17）：青鳥傳書 |
+| `idodo-invite-3/` | <https://tx-huang.github.io/invitation/idodo-invite-3/> | Dodo 的生日晚餐（2026/12/12 18:30，竹北 Terzo）：酒紅信封 + 蠟封 + 金光 |
+| `cihui-invite/` | <https://tx-huang.github.io/invitation/cihui-invite/> | 慈惠道場 堂慶（2027/1/16–17）：紙雕雲開，三種開場（`?open=a/b/c`），`?host` 產生專屬連結 |
 
 ## 測試和 lint
 

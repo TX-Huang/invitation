@@ -1,4 +1,5 @@
-// Acceptance tests for idodo-invite-3 (burgundy envelope with a wax seal, golden light, an arched card).
+// Acceptance tests for idodo-invite-3: a birthday-dinner invitation for Dodo
+// (burgundy envelope with a wax seal, golden light, an arched card, a letter from the heart).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -6,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { openPage, all, recordImages, recordTimers, runTimers, css, hideDelayMs } from './dom.mjs';
 
 const PAGE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../idodo-invite-3/index.html');
-const open = (query, patch, setup) => openPage(PAGE, query, patch, setup);
+const open = (query, patch, setup) => openPage(PAGE, query, patch, setup, 'BDAY_CONTENT');
 
 function withDom(query, patch, fn) {
   return async () => {
@@ -15,15 +16,13 @@ function withDom(query, patch, fn) {
   };
 }
 
-const text = (doc, sel) => doc.querySelector(sel).textContent.trim();
-const future = (c) => ({ ...c, date: new Date(Date.now() + 3 * 86400000 + 5 * 3600000 + 7 * 60000 + 30000).toISOString() });
-const past = (c) => ({ ...c, date: '2020-01-01T17:00:00+08:00' });
+const text = (doc, sel) => doc.querySelector(sel).textContent.replace(/\s+/g, ' ').trim();
 
 // 1. the envelope
-test('1. the page starts on a sealed envelope whose wax seal reads "I & D"', withDom('', undefined, (win, doc) => {
+test('1. the page starts on a sealed envelope whose wax seal reads "I & D"; the page behind is inert', withDom('', undefined, (win, doc) => {
   assert.ok(doc.body.classList.contains('sealed'));
-  assert.match(text(doc, '#seal').replace(/\s+/g, ' '), /I\s*&\s*D/);
-  assert.ok(doc.querySelector('#main').hasAttribute('inert'), 'the page behind is inert while sealed');
+  assert.match(text(doc, '#seal'), /I\s*&\s*D/);
+  assert.ok(doc.querySelector('#main').hasAttribute('inert'));
 }));
 
 test('1. clicking, Enter or Space opens it', async () => {
@@ -39,15 +38,15 @@ test('1. clicking, Enter or Space opens it', async () => {
   }
 });
 
-// 2. opening
-test('2. the envelope leaves when style.css has finished opening it, and only then the card text shows', async () => {
+// 2. the golden light, then the card
+test('2. the envelope leaves when style.css has finished the light, and only then the card text shows', async () => {
   const timers = [];
   const dom = await open('', undefined, recordTimers(timers));
   const doc = dom.window.document;
   try {
     timers.length = 0;
     doc.querySelector('#envelope').click();
-    assert.ok(!doc.body.classList.contains('revealed'), 'the card text waits for the light');
+    assert.ok(!doc.body.classList.contains('revealed'));
     const openMs = Math.max(...timers.map((t) => t.ms));
     assert.equal(openMs, hideDelayMs(await css(PAGE), '.envelope'));
     assert.ok(openMs >= 3500, `opening lasts ${openMs} ms; it should take its time`);
@@ -59,114 +58,63 @@ test('2. the envelope leaves when style.css has finished opening it, and only th
   }
 });
 
-// 3. guest name
-test('3. ?to=林小美 greets 林小美; no ?to= greets 親愛的朋友', async () => {
-  const named = await open('?to=' + encodeURIComponent('林小美'));
-  assert.equal(text(named.window.document, '#guest-name'), '林小美');
-  assert.ok(named.window.document.querySelector('#guest-name').classList.contains('cjk'));
-  named.window.close();
-  const plain = await open();
-  assert.equal(text(plain.window.document, '#greeting'), '親愛的朋友');
-  plain.window.close();
+// 3. the card
+test('3. the card wishes Dodo a happy birthday and gives the day and time', withDom('', undefined, (win, doc) => {
+  assert.equal(text(doc, '.card .names'), 'Dodo');
+  assert.match(text(doc, '.card .wd'), /Happy Birthday/i);
+  assert.equal(text(doc, '#card-date'), '2026 年 12 月 12 日（六） 18:30');
+}));
+
+// 4. countdown
+test('4. before the dinner it counts down; after, it thanks Dodo', async () => {
+  const soon = new Date(Date.now() + 2 * 86400000 + 3 * 3600000 + 60000).toISOString();
+  const ahead = await open('', (c) => ({ ...c, date: soon }));
+  const a = ahead.window.document;
+  assert.ok(!a.querySelector('#countdown-clock').hidden);
+  assert.equal(text(a, '#cd-days'), '2');
+  assert.equal(text(a, '#cd-hours'), '03');
+  ahead.window.close();
+  const done = await open('', (c) => ({ ...c, date: '2020-12-12T18:30:00+08:00' }));
+  assert.ok(done.window.document.querySelector('#countdown-clock').hidden);
+  assert.equal(text(done.window.document, '#countdown-note'), '生日快樂！謝謝你來');
+  done.window.close();
 });
 
-// 4. language
-test('4. switching to English changes the text and <html lang>; ?lang=en opens in English', async () => {
-  const dom = await open('?to=Amy');
-  const doc = dom.window.document;
-  doc.querySelector('[data-lang="en"]').click();
-  assert.equal(doc.documentElement.lang, 'en');
-  assert.match(text(doc, '#greeting'), /^Dear\s+Amy$/);
-  dom.window.close();
-  const en = await open('?lang=en');
-  assert.equal(en.window.document.documentElement.lang, 'en');
-  en.window.close();
-});
-
-// 5–6. date and countdown
-test('5. date null: the card says the date is coming, the countdown waits', withDom('', (c) => ({ ...c, date: null }), (win, doc) => {
-  assert.equal(text(doc, '#card-date'), '日期即將公布');
-  assert.ok(doc.querySelector('#countdown-clock').hidden);
-  assert.equal(text(doc, '#countdown-note'), '日期確定後就開始倒數');
-}));
-
-test('6. date ahead: days, hours, minutes and seconds count down', withDom('', future, (win, doc) => {
-  assert.ok(!doc.querySelector('#countdown-clock').hidden);
-  assert.equal(text(doc, '#cd-days'), '3');
-  assert.equal(text(doc, '#cd-hours'), '05');
-  assert.ok(['07', '06'].includes(text(doc, '#cd-minutes')));
-  assert.match(text(doc, '#cd-seconds'), /^\d\d$/);
-}));
-
-test('6. date passed: the countdown says 我們結婚啦', withDom('', past, (win, doc) => {
-  assert.ok(doc.querySelector('#countdown-clock').hidden);
-  assert.match(text(doc, '#countdown-note'), /我們結婚啦/);
-}));
-
-// 7. schedule
-test('7. the schedule lists every item with time and title, with a rose on the line', withDom('', undefined, (win, doc) => {
-  const items = [...doc.querySelectorAll('#timeline .t-item')];
-  const program = win.IDODO_CONTENT.program;
-  assert.equal(items.length, program.length);
-  items.forEach((li, i) => {
-    assert.equal(li.querySelector('.t-time').textContent, program[i].time);
-    assert.equal(li.querySelector('.t-title').textContent, program[i].zh);
-  });
-  assert.ok(doc.querySelector('#schedule .rose-marker'));
-}));
-
-test('7. the rose travels down the line as the schedule scrolls past', withDom('', undefined, (win) => {
-  const { progressOf } = win.IDODO;
-  assert.equal(progressOf(800, 600, 800), 0, 'not reached yet');
-  assert.equal(progressOf(-700, 600, 800), 1, 'scrolled past');
-  assert.equal(progressOf(100, 600, 800), 0.5, 'half way: the middle of the list at the middle of the screen');
-}));
-
-// 8. map
-test('8. address null: no map button; address set: it searches that address', async () => {
-  const none = await open('', (c) => ({ ...c, venue: { ...c.venue, address: null } }));
-  assert.ok(none.window.document.querySelector('#map-link').hidden);
-  none.window.close();
-  const addr = '新竹市東區光復路二段101號';
-  const set = await open('', (c) => ({ ...c, venue: { ...c.venue, address: addr } }));
-  const link = set.window.document.querySelector('#map-link');
+// 5. place
+test('5. the place is Terzo in 竹北, and the map button finds it', withDom('', undefined, (win, doc) => {
+  assert.equal(text(doc, '#venue-name'), 'Terzo');
+  assert.equal(text(doc, '#venue-area'), '竹北');
+  assert.equal(text(doc, '#venue-when'), '2026 年 12 月 12 日（六） 18:30');
+  const link = doc.querySelector('#map-link');
   assert.ok(!link.hidden);
-  assert.equal(link.href, `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`);
-  set.window.close();
-});
-
-// 9. host
-test('9. ?host skips the envelope, leaves the page usable and makes one ?to= link per name', withDom('?host', undefined, (win, doc) => {
-  assert.ok(!doc.querySelector('#host').hidden);
-  assert.ok(doc.querySelector('#envelope').hidden);
-  assert.ok(!doc.querySelector('#main').hasAttribute('inert'));
-  assert.ok(doc.body.classList.contains('revealed'));
-  doc.querySelector('#host-names').value = '林小美\n\nAmy ';
-  doc.querySelector('#host-make').click();
-  const links = [...doc.querySelectorAll('#host-links input')].map((i) => i.value);
-  assert.equal(links.length, 2);
-  assert.match(links[1], /\?to=Amy$/);
+  assert.equal(link.href, `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Terzo 竹北')}`);
 }));
 
-test('9. guests never see the link maker', withDom('?to=Amy', undefined, (win, doc) => {
-  assert.ok(doc.querySelector('#host').hidden);
+test('5. with a street address, the map button searches that address', withDom('', (c) => ({ ...c, venue: { ...c.venue, address: '新竹縣竹北市某某路 1 號' } }), (win, doc) => {
+  assert.equal(text(doc, '#venue-address'), '新竹縣竹北市某某路 1 號');
+  assert.equal(doc.querySelector('#map-link').href, `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('新竹縣竹北市某某路 1 號')}`);
 }));
 
-// 10–11. noindex, shared content
-test('10. the page asks search engines not to index it', withDom('', undefined, (win, doc) => {
+// 6. the letter
+test('6. the letter shows every paragraph from content.js, signed by the sender', withDom('', (c) => ({ ...c, letter: ['第一段', '第二段'], from: 'Isaac' }), (win, doc) => {
+  assert.deepEqual([...doc.querySelectorAll('#letter-text p')].map((p) => p.textContent), ['第一段', '第二段']);
+  assert.equal(text(doc, '#letter-from'), '—— Isaac');
+}));
+
+// 7–8. noindex, own content
+test('7. the page asks search engines not to index it', withDom('', undefined, (win, doc) => {
   assert.match(doc.querySelector('meta[name="robots"]').content, /noindex/);
 }));
 
-test('11. it reads the same content.js as the first card', withDom('', undefined, (win, doc) => {
-  assert.ok(doc.querySelector('script[src="../idodo-invite/content.js"]'));
-  const story = [...doc.querySelectorAll('#story-text p')].map((p) => p.textContent);
-  assert.deepEqual(story, [...win.IDODO_CONTENT.story.zh]);
+test('8. it reads its own content.js, not the wedding one', withDom('', undefined, (win, doc) => {
+  assert.ok(doc.querySelector('script[src="content.js"]'));
+  assert.ok(!doc.querySelector('script[src="../idodo-invite/content.js"]'));
 }));
 
-// 12. paintings
-test('12. every painting the stylesheet waits for is one the page loads', async () => {
+// 9. paintings
+test('9. every painting the stylesheet waits for is one the page loads', async () => {
   const sheet = await css(PAGE);
-  const wanted = new Set([...sheet.matchAll(/\.art-([a-z-]+)/g)].map((m) => m[1]).filter((name) => name !== 'ready'));
+  const wanted = new Set([...sheet.matchAll(/\.art-([a-z-]+)/g)].map((m) => m[1]));
   const images = [];
   const dom = await open('', undefined, recordImages(images));
   try {
@@ -178,8 +126,8 @@ test('12. every painting the stylesheet waits for is one the page loads', async 
   }
 });
 
-// 13. reduced motion
-test('13. with reduced motion, tapping the envelope shows the card at once', async () => {
+// 10. reduced motion
+test('10. with reduced motion, tapping the envelope shows the card at once', async () => {
   const reduce = (win) => { win.matchMedia = (q) => ({ matches: q.includes('reduce'), addEventListener() {} }); };
   const dom = await open('', undefined, all(reduce));
   const doc = dom.window.document;
