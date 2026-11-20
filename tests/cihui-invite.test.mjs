@@ -1,11 +1,14 @@
-// Acceptance tests for cihui-invite: a bluebird brings the letter, it opens in golden light, a scroll unrolls.
+// Acceptance tests for cihui-invite: paper-cut clouds closed over a 慈惠道場 seal; three ways to open them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openPage, all, recordImages, recordTimers, runTimers, css, hideDelayMs } from './dom.mjs';
 
-const PAGE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../cihui-invite/index.html');
+const DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../cihui-invite');
+const PAGE = path.join(DIR, 'index.html');
 const open = (query, patch, setup) => openPage(PAGE, query, patch, setup, 'CIHUI_CONTENT');
 
 function withDom(query, patch, fn) {
@@ -16,49 +19,79 @@ function withDom(query, patch, fn) {
 }
 
 const text = (doc, sel) => doc.querySelector(sel).textContent.replace(/\s+/g, ' ').trim();
+const texts = (doc, sel) => [...doc.querySelectorAll(sel)].map((n) => n.textContent.replace(/\s+/g, ' ').trim());
 const reduce = (win) => { win.matchMedia = (q) => ({ matches: q.includes('reduce'), addEventListener() {} }); };
+const q = (params) => `?${new URLSearchParams(params)}`;
 
-// Load the page and let the bluebird finish delivering the letter.
-async function delivered(query = '', patch) {
+// Run the recorded timers, and the ones they set in turn, until none is due within maxMs.
+function runAll(timers, maxMs) {
+  while (timers.some((t) => t.ms <= maxMs)) runTimers(timers, maxMs);
+}
+
+// Load the page and let the clouds close and the seal be stamped.
+async function landed(query = '', patch) {
   const timers = [];
   const dom = await open(query, patch, recordTimers(timers));
-  runTimers(timers, 6000);
+  runAll(timers, 4000);
   return { dom, doc: dom.window.document, timers };
 }
 
-// 1. the bluebird brings the letter
-test('1. a bluebird flies in carrying the letter; the letter lands, sealed with 慈惠', async () => {
+// 1. closed
+test('1. three paper cloud layers a side close over a seal of 慈惠道場, with the guest\'s name below', async () => {
   const timers = [];
-  const dom = await open('', undefined, recordTimers(timers));
+  const dom = await open(q({ to: '林小美師姐' }), undefined, recordTimers(timers));
   const doc = dom.window.document;
   try {
+    assert.equal(doc.querySelectorAll('#sky .clouds .side.L img').length, 3);
+    assert.equal(doc.querySelectorAll('#sky .clouds .side.R img').length, 3);
+    assert.equal(doc.querySelector('#sky .seal').getAttribute('aria-label'), '慈惠道場印');
+    assert.equal(text(doc, '#sky .tag'), '林小美師姐 台啟');
     assert.ok(doc.body.classList.contains('sealed'));
-    assert.ok(doc.querySelector('#sky .bird'), 'there is a bluebird');
-    assert.ok(doc.querySelector('#sky .bird .carried'), 'it carries the letter');
-    assert.equal(text(doc, '#letter .seal'), '慈 惠');
+    assert.ok(doc.querySelector('#main').hasAttribute('inert'), 'the page is inert until opened');
     assert.ok(!doc.body.classList.contains('landed'));
-    runTimers(timers, 6000);
-    assert.ok(doc.body.classList.contains('landed'), 'the letter has landed');
-    assert.ok(doc.querySelector('#main').hasAttribute('inert'), 'the page behind is inert until the letter is opened');
+    runAll(timers, 4000);
+    assert.ok(doc.body.classList.contains('landed'), 'the seal has been stamped');
   } finally {
     dom.window.close();
   }
 });
 
-test('1. the letter is a full envelope with four flaps, and the name sits on a label pasted on it', withDom('?to=' + encodeURIComponent('林小美師姐'), undefined, (win, doc) => {
-  for (const sel of ['.flap-top', '.fl-left', '.fl-right', '.fl-bottom']) {
-    assert.ok(doc.querySelector(`#letter ${sel}`), `the envelope has ${sel}`);
+test('1. the clouds start to move only once the paintings of the opening have loaded', async () => {
+  const timers = [];
+  const images = [];
+  const dom = await open('', undefined, all(recordTimers(timers), recordImages(images)));
+  const doc = dom.window.document;
+  try {
+    const asked = images.map((img) => img.src);
+    for (const name of ['cloud-front', 'cloud-mid', 'cloud-back', 'paper', 'seal-ink', 'seal-slip', 'mist-1', 'mist-2', 'mist-3']) {
+      assert.ok(asked.includes(`art/${name}.webp`), `the opening waits for art/${name}.webp`);
+    }
+    runAll(timers, 2000);
+    assert.ok(!doc.body.classList.contains('ready'), 'nothing moves while the paintings are still coming');
+    images.forEach((img) => img.onload && img.onload());
+    assert.ok(doc.body.classList.contains('ready'));
+    assert.ok(!doc.body.classList.contains('landed'), 'the clouds have only just started');
+    runAll(timers, 4000);
+    assert.ok(doc.body.classList.contains('landed'));
+  } finally {
+    dom.window.close();
   }
-  assert.equal(text(doc, '#letter .slip #letter-to'), '林小美師姐');
-}));
+});
 
-test('2. when the letter opens, a bluebird flies out of the light', withDom('', undefined, (win, doc) => {
-  assert.ok(doc.querySelector('#sky .bird-out'));
-}));
+test('1. on a slow line the clouds start anyway after 3 seconds', async () => {
+  const timers = [];
+  const dom = await open('', undefined, all(recordTimers(timers), recordImages([])));
+  try {
+    runAll(timers, 3000);
+    assert.ok(dom.window.document.body.classList.contains('ready'));
+  } finally {
+    dom.window.close();
+  }
+});
 
-test('1. once landed, clicking, Enter or Space opens the letter', async () => {
+test('1. once the seal is stamped, clicking, Enter or Space opens it', async () => {
   for (const how of ['click', 'Enter', ' ']) {
-    const { dom, doc } = await delivered();
+    const { dom, doc } = await landed();
     const sky = doc.querySelector('#sky');
     if (how === 'click') sky.click();
     else sky.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: how, bubbles: true }));
@@ -68,23 +101,32 @@ test('1. once landed, clicking, Enter or Space opens the letter', async () => {
   }
 });
 
-test('1. a tap while the bird is still flying opens the letter as soon as it lands', async () => {
+test('1. a tap before the seal is stamped opens it as soon as it is', async () => {
   const timers = [];
   const dom = await open('', undefined, recordTimers(timers));
   const doc = dom.window.document;
   try {
     doc.querySelector('#sky').click();
-    assert.ok(!doc.body.classList.contains('opened'), 'waits for the letter');
-    runTimers(timers, 6000);
+    assert.ok(!doc.body.classList.contains('opened'), 'waits for the seal');
+    runAll(timers, 4000);
     assert.ok(doc.body.classList.contains('opened'));
   } finally {
     dom.window.close();
   }
 });
 
-// 2. opening
-test('2. the sky leaves when style.css has finished the golden light, then the scroll unrolls', async () => {
-  const { dom, doc, timers } = await delivered();
+// 2. three ways to open
+test('2. ?open=a, b or c picks how it opens; c (both together) when missing or unknown', async () => {
+  for (const [query, want] of [['?open=a', 'open-a'], ['?open=b', 'open-b'], ['?open=c', 'open-c'], ['', 'open-c'], ['?open=zz', 'open-c']]) {
+    const dom = await open(query);
+    const cls = [...dom.window.document.body.classList].filter((c) => c.startsWith('open-'));
+    assert.deepEqual(cls, [want], `${query || 'no ?open'} should give ${want}`);
+    dom.window.close();
+  }
+});
+
+test('2. the opening layer goes away when style.css has finished with it', async () => {
+  const { dom, doc, timers } = await landed();
   try {
     timers.length = 0;
     doc.querySelector('#sky').click();
@@ -100,30 +142,54 @@ test('2. the sky leaves when style.css has finished the golden light, then the s
 });
 
 // 3. guest name
-test('3. ?to=林小美師姐: the envelope and the scroll name her', withDom('?to=' + encodeURIComponent('林小美師姐'), undefined, (win, doc) => {
-  assert.equal(text(doc, '#letter-to'), '林小美師姐');
-  assert.equal(text(doc, '#scroll-guest'), '敬邀 林小美師姐');
+test('3. ?to=林小美師姐: the slip and the invitation name her', withDom(q({ to: '林小美師姐' }), undefined, (win, doc) => {
+  assert.equal(text(doc, '#tag-to'), '林小美師姐');
+  assert.equal(text(doc, '#hero-guest'), '敬邀 林小美師姐');
 }));
 
-test('3. no ?to=: the envelope and the scroll invite 十方大德', withDom('', undefined, (win, doc) => {
-  assert.equal(text(doc, '#letter-to'), '十方大德');
-  assert.equal(text(doc, '#scroll-guest'), '敬邀 十方大德');
+test('3. no ?to=: the slip and the invitation are for 十方大德', withDom('', undefined, (win, doc) => {
+  assert.equal(text(doc, '#tag-to'), '十方大德');
+  assert.equal(text(doc, '#hero-guest'), '敬邀 十方大德');
 }));
 
-// 4. the days
-test('4. the scroll writes the dates in Chinese numerals, and the two days are listed with weekdays', withDom('', undefined, (win, doc) => {
-  assert.equal(text(doc, '#scroll-dates'), '謹訂於國曆二〇二七年一月十六日至十七日');
-  const days = [...doc.querySelectorAll('#dates li')].map((li) => li.textContent.replace(/\s+/g, ' ').trim());
-  assert.deepEqual(days, ['1 月 16 日（六）', '1 月 17 日（日）']);
+// 4. the words of the invitation
+test('4. by default: 堂慶, the dates in Chinese numerals, 恭請蒞臨 同霑法喜, signed 慈惠道場 敬邀', withDom('', undefined, (win, doc) => {
+  assert.equal(text(doc, '#hero-title'), '堂慶');
+  assert.deepEqual(texts(doc, '#hero-text .v-line'), ['謹訂於國曆二〇二七年', '一月十六日至十七日', '恭請蒞臨 同霑法喜']);
+  assert.equal(text(doc, '#hero-sign'), '慈惠道場 敬邀');
+}));
+
+test('4. ?title=, ?msg= (one line each) and ?sign= replace them, as plain text', withDom(q({
+  title: '開光', msg: '謹訂於臘月初八\n恭請 <b>蒞臨</b>', sign: '慈惠道場 合十',
+}), undefined, (win, doc) => {
+  assert.equal(text(doc, '#hero-title'), '開光');
+  assert.deepEqual(texts(doc, '#hero-text .v-line'), ['謹訂於臘月初八', '恭請 <b>蒞臨</b>']);
+  assert.equal(doc.querySelector('#hero-text b'), null, 'words from the link are never read as HTML');
+  assert.equal(text(doc, '#hero-sign'), '慈惠道場 合十');
+}));
+
+test('4. words from the link are cut to a sensible length', withDom(q({
+  to: '名'.repeat(80), title: '題'.repeat(20), msg: Array.from({ length: 12 }, () => '字'.repeat(60)).join('\n'),
+}), undefined, (win, doc) => {
+  assert.ok(text(doc, '#tag-to').length <= 40);
+  assert.ok(text(doc, '#hero-title').length <= 6);
+  const lines = texts(doc, '#hero-text .v-line');
+  assert.ok(lines.length <= 8);
+  assert.ok(lines.every((l) => l.length <= 30));
+}));
+
+// 5. days
+test('5. the two days are listed with weekdays; no start time yet says 時間待公布', withDom('', undefined, (win, doc) => {
+  assert.deepEqual(texts(doc, '#dates li'), ['1 月 16 日（六）', '1 月 17 日（日）']);
   assert.equal(text(doc, '#time-line'), '時間待公布');
 }));
 
-test('4. with a start time, the time is shown', withDom('', (c) => ({ ...c, start: '2027-01-16T09:30:00+08:00' }), (win, doc) => {
+test('5. with a start time, the time is shown', withDom('', (c) => ({ ...c, start: '2027-01-16T09:30:00+08:00' }), (win, doc) => {
   assert.equal(text(doc, '#time-line'), '09:30 開始');
 }));
 
-// 5. countdown
-test('5. before the day it counts down; after, it thanks everyone', async () => {
+// 6. countdown
+test('6. before the day it counts down; after, it thanks everyone', async () => {
   const soon = new Date(Date.now() + 2 * 86400000 + 3 * 3600000 + 60000).toISOString();
   const ahead = await open('', (c) => ({ ...c, start: soon }));
   const a = ahead.window.document;
@@ -137,13 +203,13 @@ test('5. before the day it counts down; after, it thanks everyone', async () => 
   done.window.close();
 });
 
-// 6. program
-test('6. no program yet: it says 流程待公布', withDom('', undefined, (win, doc) => {
+// 7. program
+test('7. no program yet: it says 流程待公布', withDom('', undefined, (win, doc) => {
   assert.equal(text(doc, '#program-note'), '流程待公布');
   assert.equal(doc.querySelectorAll('#program .p-item').length, 0);
 }));
 
-test('6. a program is listed day by day', withDom('', (c) => ({
+test('7. a program is listed day by day, in time order', withDom('', (c) => ({
   ...c,
   program: [
     { day: 2, time: '10:00', title: '祝壽' },
@@ -151,13 +217,12 @@ test('6. a program is listed day by day', withDom('', (c) => ({
   ],
 }), (win, doc) => {
   assert.ok(doc.querySelector('#program-note').hidden);
-  const rows = [...doc.querySelectorAll('#program .p-item')].map((li) => li.textContent.replace(/\s+/g, ' ').trim());
-  assert.deepEqual(rows, ['09:00 恭迎聖駕', '10:00 祝壽']);
-  assert.deepEqual([...doc.querySelectorAll('#program .p-day')].map((h) => h.textContent.trim()), ['1 月 16 日（六）', '1 月 17 日（日）']);
+  assert.deepEqual(texts(doc, '#program .p-item'), ['09:00 恭迎聖駕', '10:00 祝壽']);
+  assert.deepEqual(texts(doc, '#program .p-day'), ['1 月 16 日（六）', '1 月 17 日（日）']);
 }));
 
-// 7. place
-test('7. address null: 地址待公布 and no map; address set: the map button searches it', async () => {
+// 8. place
+test('8. address null: 地址待公布 and no map; address set: the map button searches it', async () => {
   const none = await open();
   assert.equal(text(none.window.document, '#venue-address'), '地址待公布');
   assert.ok(none.window.document.querySelector('#map-link').hidden);
@@ -170,58 +235,92 @@ test('7. address null: 地址待公布 and no map; address set: the map button s
   set.window.close();
 });
 
-// 8. deities
-test('8. the four deities of the dojo are shown, 瑤池金母 as the main one', withDom('', undefined, (win, doc) => {
+// 9. deities
+test('9. the four deities of the dojo are shown, 瑤池金母 as the main one', withDom('', undefined, (win, doc) => {
   const cards = [...doc.querySelectorAll('#deities .deity')];
   assert.deepEqual(cards.map((c) => c.querySelector('.d-name').textContent), ['瑤池金母', '九天玄女', '中壇元帥', '福德正神']);
   assert.equal(cards[0].querySelector('.d-role').textContent, '主祀');
 }));
 
-// 9. host
-test('9. ?host skips the letter and makes one ?to= link per name; guests never see it', async () => {
+// 10. host
+test('10. ?host skips the opening and shows the link maker; guests never see it', async () => {
   const host = await open('?host');
   const doc = host.window.document;
   assert.ok(!doc.querySelector('#host').hidden);
   assert.ok(doc.querySelector('#sky').hidden);
   assert.ok(doc.body.classList.contains('revealed'));
-  doc.querySelector('#host-names').value = '林小美師姐\n\n王大明師兄 ';
-  doc.querySelector('#host-make').click();
-  const links = [...doc.querySelectorAll('#host-links input')].map((i) => i.value);
-  assert.equal(links.length, 2);
-  assert.match(links[1], new RegExp(`\\?to=${encodeURIComponent('王大明師兄')}$`));
   host.window.close();
-  const guest = await open('?to=Amy');
+  const guest = await open(q({ to: 'Amy' }));
   assert.ok(guest.window.document.querySelector('#host').hidden);
   guest.window.close();
 });
 
-// 10–11. noindex, credit
-test('10. the page asks search engines not to index it', withDom('', undefined, (win, doc) => {
-  assert.match(doc.querySelector('meta[name="robots"]').content, /noindex/);
-}));
-
-test('11. the seal-script plaque credits its font licence', withDom('', undefined, (win, doc) => {
-  assert.match(text(doc, '#credit'), /崇羲篆體.*CC BY-ND 3\.0 TW/);
-}));
-
-// 12. paintings
-test('12. every painting the stylesheet waits for is one the page loads', async () => {
-  const sheet = await css(PAGE);
-  const wanted = new Set([...sheet.matchAll(/\.art-([a-z0-9-]+)/g)].map((m) => m[1]));
-  const images = [];
-  const dom = await open('', undefined, recordImages(images));
+test('10. the link maker makes one link per name, carrying the opening and only the words that were changed', async () => {
+  const host = await open('?host');
+  const doc = host.window.document;
   try {
-    const loaded = new Set(images.map((img) => img.src));
-    assert.ok(wanted.size > 0);
-    for (const name of wanted) assert.ok(loaded.has(`art/${name}.webp`), `style.css uses .art-${name} but the page never loads art/${name}.webp`);
+    assert.equal(doc.querySelector('#host-title').value, '堂慶', 'the fields start with the words in use');
+    assert.equal(doc.querySelector('#host-msg').value, '謹訂於國曆二〇二七年\n一月十六日至十七日\n恭請蒞臨 同霑法喜');
+    assert.equal(doc.querySelector('#host-sign').value, '慈惠道場 敬邀');
+    doc.querySelector('#host-names').value = '林小美師姐\n\n王大明師兄 ';
+    doc.querySelector('#host-open').value = 'a';
+    doc.querySelector('#host-make').click();
+    let links = [...doc.querySelectorAll('#host-links input')].map((i) => new URL(i.value));
+    assert.equal(links.length, 2);
+    assert.equal(links[1].searchParams.get('to'), '王大明師兄');
+    assert.equal(links[1].searchParams.get('open'), 'a');
+    for (const key of ['title', 'msg', 'sign']) assert.ok(!links[1].searchParams.has(key), `${key} unchanged, so not in the link`);
+    const general = new URL(doc.querySelector('#host-general').value);
+    assert.ok(!general.searchParams.has('to'), 'a link with no name, for a group chat');
+    assert.equal(general.searchParams.get('open'), 'a');
+
+    doc.querySelector('#host-sign').value = '慈惠道場 合十';
+    doc.querySelector('#host-msg').value = '謹訂於臘月初八\n恭請蒞臨';
+    doc.querySelector('#host-make').click();
+    links = [...doc.querySelectorAll('#host-links input')].map((i) => new URL(i.value));
+    assert.equal(links[0].searchParams.get('sign'), '慈惠道場 合十');
+    assert.equal(links[0].searchParams.get('msg'), '謹訂於臘月初八\n恭請蒞臨');
+    assert.ok(!links[0].searchParams.has('title'));
   } finally {
+    host.window.close();
+  }
+});
+
+// 11. the full name
+test('11. the dojo is always 慈惠道場: 慈惠 never stands alone on the page', async () => {
+  for (const query of ['', '?host', q({ to: '林小美師姐' })]) {
+    const dom = await open(query);
+    const doc = dom.window.document;
+    const words = [doc.body.textContent, ...[...doc.querySelectorAll('[aria-label],[alt],[placeholder]')]
+      .map((n) => `${n.getAttribute('aria-label') || ''} ${n.getAttribute('alt') || ''} ${n.getAttribute('placeholder') || ''}`), doc.title];
+    // spaces and line breaks do not count: 慈 and 惠 on two lines still read as 慈惠
+    for (const w of words.map((x) => x.replace(/\s+/g, ''))) {
+      assert.doesNotMatch(w, /慈惠(?!道場)/, `${query || 'the page'}: "${w.match(/.{0,8}慈惠.{0,4}/)?.[0]}"`);
+    }
     dom.window.close();
   }
 });
 
-// 13. reduced motion
-test('13. with reduced motion, the letter is already there and opens at once', async () => {
-  const dom = await open('', undefined, all(reduce));
+// 12. noindex
+test('12. the page asks search engines not to index it', withDom('', undefined, (win, doc) => {
+  assert.match(doc.querySelector('meta[name="robots"]').content, /noindex/);
+}));
+
+// 13. paintings
+test('13. every painting the page or the stylesheet uses is in art/', async () => {
+  const sources = [await css(PAGE), await readFile(PAGE, 'utf8'), await readFile(path.join(DIR, 'app.js'), 'utf8')].join('\n');
+  const used = new Set([...sources.matchAll(/art\/([a-z0-9-]+\.webp)/g)].map((m) => m[1]));
+  const images = [];
+  const dom = await open('', undefined, recordImages(images));
+  dom.window.close();
+  images.forEach((img) => used.add(img.src.replace('art/', '')));
+  assert.ok(used.size > 5);
+  for (const file of used) assert.ok(existsSync(path.join(DIR, 'art', file)), `art/${file} is used but missing`);
+});
+
+// 14. reduced motion
+test('14. with reduced motion, the clouds are already closed and one tap shows the invitation', async () => {
+  const dom = await open('', undefined, reduce);
   const doc = dom.window.document;
   try {
     assert.ok(doc.body.classList.contains('landed'));

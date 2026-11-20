@@ -1,729 +1,374 @@
-/* 慈惠道場 堂慶 — a bluebird brings the letter; golden light; a hanging scroll on the Jade Pool */
+/* 慈惠道場 堂慶 — paper-cut clouds over a 慈惠道場 seal; ivory paper, gold foil, cinnabar */
 
 :root {
-  --paper: #ECE8E3;
-  --paper-hi: #F6F3EE;
-  --paper-lo: #E2DCD4;
-  --ink: #2F2A25;
-  --soft: rgba(47, 42, 37, .62);
-  --line: #D3C6B2;
-  --gold: #A8844A;
-  --gold-hi: #D9BF8A;
-  --celadon: #6F9A92;
-  --cinnabar: #A8383A;
-  --serif: 'Noto Serif TC', 'Songti TC', serif;
-  --kai: 'LXGW WenKai TC', 'Noto Serif TC', serif;
-  --brush: 'Yuji Boku', 'Noto Serif TC', serif;
+  --paper: #F7F3EA;
+  --ink: #1D1A16;
+  --soft: rgba(29, 26, 22, .56);
+  --gold: #B58E4F;
+  --gold-hi: #E2C98F;
+  --line: #DCCDB0;
+  --cinnabar: #A42E27;
+  --serif: 'Noto Serif TC', 'Songti TC', 'PMingLiU', serif;
   --ease: cubic-bezier(.2, .7, .2, 1);
   --col: 480px;
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .26 0 0 0 0 .2 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --cx: 50%;
+  --cy: 45%;
+  --c: .45s; /* when the invitation starts to appear after the tap; set per opening below */
 }
+@property --r { syntax: '<length>'; inherits: false; initial-value: 0px; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  background: #D8D1C8 var(--grain);
+  background: var(--paper) url("art/paper.webp") top center / 1080px auto;
   color: var(--ink);
-  font-family: var(--kai);
+  font-family: var(--serif);
   line-height: 1.8;
   -webkit-font-smoothing: antialiased;
 }
-/* nothing scrolls until the scroll is unrolled */
+/* nothing scrolls until the opening is done */
 body:not(.revealed) { overflow: hidden; height: 100svh; }
 h1, h2, h3, p { margin: 0; }
-button { font: inherit; color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.defs { position: absolute; }
 
+.open-a { --c: .75s; }
+.open-b { --c: .05s; }
+.open-c { --c: .45s; }
+
+/* ================= the opening =================
+ * body.ready (paintings loaded):
+ *   0.15–2.4  the paper clouds slide in from both sides, back layer first, and interlock in the middle
+ *   1.3       the slip of paper is laid on the middle
+ *   1.95      the 慈惠道場 seal is stamped on it: a press, the ink takes in patches, the paper dents
+ *   2.5–3.0   the guest's name and 輕觸開啟 appear;  body.landed at 2.7 s (app.js DELIVERY_MS)
+ * body.opened (the tap), all three: the seal glows, its ink lifts off as rising sparkles, the slip fades.
+ *   a 雲散霧開  a faint ripple, a bloom of light; the clouds drift apart and melt into mist that rolls in
+ *               and thins out
+ *   b 金光法陣  a ring of gold light spreads from the seal; inside it the clouds are gone, outside they are
+ *               pushed back; gold dust spirals off the ring
+ *   c 兩者混合  the ring of light spreads while the clouds drift apart into the mist
+ * The layer goes away 5 s after the tap (app.js OPEN_MS).
+ */
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: visibility 0s linear 5s;
+}
+.opened .sky { visibility: hidden; pointer-events: none; }
+
+/* light behind the clouds, showing between the interlocking lobes */
+.glow {
+  position: absolute;
+  left: var(--cx);
+  top: var(--cy);
+  width: 300px;
+  height: 80vh;
+  translate: -50% -50%;
+  background: radial-gradient(50% 50% at 50% 50%, #FFFFFF 0, rgba(255, 251, 240, .9) 35%, rgba(246, 226, 182, .35) 65%, rgba(246, 226, 182, 0) 100%);
+  opacity: 0;
+  transition: opacity 1.2s ease 1.5s;
+}
+.ready .glow { opacity: 1; animation: breathe 3.6s ease-in-out 2.7s infinite; }
+@keyframes breathe { 50% { opacity: .75; } }
+.opened .glow { opacity: 0; animation: glow-out 1.6s ease .6s backwards; }
+@keyframes glow-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* the clouds: three layers a side; the right side is a mirror image */
+.clouds { position: absolute; inset: 0; perspective: 900px; perspective-origin: 50% 45%; }
+.side { position: absolute; inset: 0; transform-style: preserve-3d; }
+.side.R { scale: -1 1; }
+.mover {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 0 50%;
+  opacity: 0;
+  transform: translateX(var(--from));
+  transition: transform 1.9s cubic-bezier(.16, 1, .3, 1) var(--d), opacity 1s ease var(--d);
+}
+.mover img { position: absolute; top: 50%; height: 118vh; width: auto; max-width: none; pointer-events: none; user-select: none; }
+.back .mover { --from: -40vw; --d: .15s; --dur: 3.4s; --od: .57s; }
+.mid .mover { --from: -70vw; --d: .43s; --dur: 3.2s; --od: .51s; }
+.front .mover { --from: -110vw; --d: .71s; --dur: 3s; --od: .45s; }
+.back img { filter: drop-shadow(5px 2px 7px rgba(92, 70, 40, .20)); }
+.mid img { filter: drop-shadow(7px 3px 10px rgba(92, 70, 40, .22)); }
+.front img { filter: drop-shadow(9px 4px 14px rgba(92, 70, 40, .24)); }
+.ready .mover { opacity: 1; transform: none; }
+
+/* the seal of 慈惠道場 on its slip of paper */
+.seal { position: absolute; z-index: 2; left: var(--cx); top: var(--cy); width: 100px; height: 100px; margin: -50px 0 0 -50px; opacity: 0; transition: opacity .7s ease 1.3s; }
+.ready .seal { opacity: 1; }
+.seal b { position: absolute; inset: -14px; background: url("art/seal-slip.webp") center / 100% 100%; filter: drop-shadow(0 1px 2px rgba(80, 60, 30, .28)) drop-shadow(0 4px 10px rgba(80, 60, 30, .14)); }
+.seal i, .stamp i { position: absolute; inset: 0; background: url("art/seal-ink.webp") 0 0 / 800% 100% no-repeat; }
+.seal i, .stamp { mix-blend-mode: multiply; }
+.seal::before, .stamp::before { content: ""; position: absolute; inset: -6%; border-radius: 6%; box-shadow: 0 0 10px 3px rgba(96, 72, 40, .22), inset 0 0 8px 2px rgba(96, 72, 40, .16); opacity: 0; }
+.seal::after { content: ""; position: absolute; inset: -70%; z-index: -1; border-radius: 50%; background: radial-gradient(circle, rgba(255, 246, 214, .95) 0, rgba(244, 214, 150, .55) 35%, rgba(244, 214, 150, 0) 70%); opacity: 0; }
+.seal i { opacity: 0; }
+.ready .seal i { animation: stamp-in .5s cubic-bezier(.2, .8, .2, 1) 1.95s forwards, ink-take .34s steps(7, end) 1.95s forwards; }
+.ready .seal::before { animation: dent .8s ease-out 2.05s; }
+.landed .seal i { opacity: 1; background-position: 100% 0; }
+@keyframes stamp-in { 0% { opacity: 0; scale: 1.07; } 6% { opacity: 1; } 100% { opacity: 1; scale: 1; } }
+@keyframes ink-take { from { background-position: 0 0; } to { background-position: 100% 0; } }
+@keyframes dent { 0% { opacity: 0; } 25% { opacity: .55; } 100% { opacity: 0; } }
+
+.tag {
+  position: absolute;
+  z-index: 2;
+  left: var(--cx);
+  top: calc(var(--cy) + 74px);
+  translate: -50% 0;
+  padding: 14px 6px;
+  writing-mode: vertical-rl;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: .32em;
+  white-space: nowrap;
+  background: radial-gradient(closest-side, rgba(251, 248, 242, .92), rgba(251, 248, 242, 0));
+  opacity: 0;
+  transition: opacity 1.2s ease 2.5s;
+}
+.tag small { font-size: .7em; font-weight: 400; color: var(--soft); margin-top: .9em; }
+.hint { position: absolute; z-index: 2; left: 0; right: 0; bottom: max(6.5%, env(safe-area-inset-bottom)); text-align: center; font-size: 12px; letter-spacing: .7em; padding-left: .7em; color: var(--soft); opacity: 0; transition: opacity 1.2s ease 3s; }
+.hint::before { content: ""; display: block; width: 6px; height: 6px; margin: 0 auto 14px; border-radius: 50%; background: var(--gold); animation: ping 2.6s ease-out infinite; }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(181, 142, 79, .5); } 100% { box-shadow: 0 0 0 16px rgba(181, 142, 79, 0); } }
+.ready .tag, .ready .hint { opacity: 1; }
+.sheen { position: absolute; inset: -20%; z-index: 3; pointer-events: none; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%); mix-blend-mode: soft-light; translate: -100% 0; opacity: 0; }
+.landed .sheen { opacity: 1; animation: sheen 6s cubic-bezier(.45, 0, .25, 1) 1s infinite; }
+@keyframes sheen { 0% { translate: -100% 0; } 45%, 100% { translate: 100% 0; } }
+
+/* ---- the tap, all three ---- */
+.opened .sheen { opacity: 0; animation: none; }
+.opened .tag, .opened .hint { opacity: 0; transition: opacity .4s ease; }
+.opened .seal::after { animation: halo 1.4s ease forwards; }
+@keyframes halo { 0% { opacity: 0; scale: .6; } 25% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1.5; } }
+.opened .seal i { opacity: 1; animation: ink-lift .55s steps(7, end) .32s forwards; }
+@keyframes ink-lift { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.opened .seal b { animation: slip-lift 1.1s cubic-bezier(.4, 0, .2, 1) .5s forwards; }
+@keyframes slip-lift { to { opacity: 0; translate: 0 -16px; scale: 1.05; filter: blur(3px) brightness(1.15); } }
+
+/* ---- a and c: the clouds drift apart and melt away ---- */
+.open-a.opened .mover, .open-c.opened .mover { animation: drift var(--dur) cubic-bezier(.33, 0, .15, 1) var(--od) forwards; }
+.open-c .back .mover { --dur: 2.8s; }
+.open-c .mid .mover { --dur: 2.6s; }
+.open-c .front .mover { --dur: 2.4s; }
+@keyframes drift {
+  0% { transform: none; opacity: 1; }
+  40% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(var(--sc)); opacity: 0; }
+}
+/* the mist: three veils that drift a little; on the tap they roll in, then thin out */
+.mist { position: absolute; z-index: 4; left: -50%; width: 200%; background: center / 100% 100% no-repeat; opacity: 0; pointer-events: none; }
+.mist.m1 { top: 8%; height: 46%; background-image: url("art/mist-1.webp"); }
+.mist.m2 { top: 52%; height: 50%; background-image: url("art/mist-2.webp"); }
+.mist.m3 { top: 10%; height: 70%; left: -30%; width: 160%; background-image: url("art/mist-3.webp"); }
+@keyframes sway { from { translate: -6% 0; } to { translate: 6% 0; } }
+.open-a.opened .mist.m3, .open-c.opened .mist.m3 { animation: sway 19s ease-in-out infinite alternate, mist-bank 4.3s cubic-bezier(.3, 0, .3, 1) .5s forwards; }
+@keyframes mist-bank { 0% { opacity: 0; scale: .5; } 28% { opacity: .95; scale: 1; } 100% { opacity: 0; scale: 1.7; } }
+.open-a.opened .mist.m1, .open-c.opened .mist.m1 { animation: sway 17s ease-in-out infinite alternate, mist-veil 4.2s ease .7s forwards; }
+.open-a.opened .mist.m2, .open-c.opened .mist.m2 { animation: sway 23s ease-in-out infinite alternate-reverse, mist-veil 4.3s ease .6s forwards; }
+@keyframes mist-veil { 0% { opacity: 0; } 30% { opacity: .85; } 100% { opacity: 0; } }
+
+/* ---- a: a faint ripple and a bloom of light ---- */
+.ripple { position: absolute; z-index: 1; left: var(--cx); top: var(--cy); width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 1px solid rgba(201, 168, 106, .8); box-shadow: 0 0 12px rgba(236, 206, 140, .5), inset 0 0 12px rgba(236, 206, 140, .4); opacity: 0; pointer-events: none; }
+.open-a.opened .ripple { animation: ripple 1.8s cubic-bezier(.2, .7, .3, 1) .15s forwards; }
+@keyframes ripple { 0% { opacity: 0; scale: .6; } 15% { opacity: .8; } 100% { opacity: 0; scale: 4.2; } }
+.bloom { position: absolute; z-index: 3; left: var(--cx); top: var(--cy); width: 120vmax; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, #FFFFFF 0, rgba(255, 252, 244, .92) 18%, rgba(250, 236, 204, .5) 40%, rgba(250, 236, 204, 0) 66%); opacity: 0; scale: .2; pointer-events: none; }
+.open-a.opened .bloom { animation: bloom 3.6s cubic-bezier(.3, 0, .2, 1) .45s forwards; }
+@keyframes bloom { 0% { opacity: 0; scale: .2; } 30% { opacity: .85; scale: .9; } 100% { opacity: 0; scale: 1.6; } }
+
+/* ---- b and c: a ring of gold light spreads from the seal ---- */
+.spell { position: absolute; z-index: 5; left: var(--cx); top: var(--cy); width: 200px; height: 200px; margin: -100px 0 0 -100px; opacity: 0; pointer-events: none; }
+.spell svg { width: 100%; height: 100%; overflow: visible; }
+.spell circle { fill: none; vector-effect: non-scaling-stroke; }
+.spell .a { stroke: url(#foil); stroke-width: 2.4; filter: drop-shadow(0 0 4px rgba(255, 226, 160, .95)) drop-shadow(0 0 14px rgba(236, 196, 110, .6)); }
+.spell .b { stroke: rgba(236, 206, 140, .7); stroke-width: 1; }
+.spell .c { stroke: rgba(255, 240, 205, .5); stroke-width: 18; filter: blur(8px); }
+.open-b.opened .spell, .open-c.opened .spell { animation: spell 2.2s cubic-bezier(.33, 1, .68, 1) .4s forwards; }
+@keyframes spell { 0% { opacity: 0; scale: .45; } 8% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; scale: var(--smax); } }
+.disk { position: absolute; left: var(--cx); top: var(--cy); width: 200px; height: 200px; margin: -100px 0 0 -100px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .7) 0, rgba(255, 253, 248, .45) 60%, rgba(252, 240, 214, .35) 93%, rgba(252, 240, 214, 0) 100%); opacity: 0; pointer-events: none; }
+.open-b.opened .disk, .open-c.opened .disk { z-index: 1; animation: disk 2.2s cubic-bezier(.33, 1, .68, 1) .4s forwards, disk-fade 1s ease 1.2s forwards; }
+@keyframes disk { 0% { opacity: 0; scale: .45; } 10% { opacity: 1; } 100% { opacity: 1; scale: var(--smax); } }
+@keyframes disk-fade { to { opacity: 0; } }
+/* b only: inside the ring the clouds are gone, and they are pushed back */
+.open-b .clouds { -webkit-mask-image: radial-gradient(circle at 50% 45%, transparent calc(var(--r) - 46px), #000 calc(var(--r) - 4px)); mask-image: radial-gradient(circle at 50% 45%, transparent calc(var(--r) - 46px), #000 calc(var(--r) - 4px)); }
+.open-b.opened .clouds { animation: hole 2.2s cubic-bezier(.33, 1, .68, 1) .4s forwards; }
+@keyframes hole { from { --r: 45px; } to { --r: var(--rmax); } }
+.open-b.opened .mover { animation: pushed 2.2s cubic-bezier(.33, 1, .68, 1) .45s forwards; }
+@keyframes pushed { to { transform: translateX(var(--px)) scale(1.08); } }
+
+/* gold leaf and sparkles (drawn by app.js) */
+.gold { position: fixed; inset: 0; z-index: 11; width: 100%; height: 100%; pointer-events: none; }
+
+/* ================= the page ================= */
 .page {
   position: relative;
   max-width: var(--col);
   margin: 0 auto;
   overflow: hidden;
-  background: var(--paper) var(--grain);
-  box-shadow: 0 0 70px rgba(60, 50, 40, .18);
+  background: var(--paper) url("art/paper.webp") top center / 100% auto;
   outline: none;
 }
-section, .foot { position: relative; padding: 60px 28px; text-align: center; }
 
-.title { font-family: var(--serif); font-weight: 600; font-size: 22px; letter-spacing: .5em; padding-left: .5em; color: var(--ink); }
-
-/* a band of gold auspicious clouds between sections */
-.cloud-band {
-  height: 26px;
-  margin: 0 auto 22px;
-  width: 70%;
-  background:
-    radial-gradient(circle at 50% 50%, var(--gold) 0 3px, transparent 3.5px) center / 18px 26px no-repeat,
-    linear-gradient(var(--gold-hi), var(--gold-hi)) center / 100% 1px no-repeat;
-}
-.art-cloud-band .cloud-band { height: auto; aspect-ratio: 6 / 1; background: url("art/cloud-band.webp") center / contain no-repeat; }
-
-/* ---------- the sky ----------
- * On load (body.sealed):
- *   0.30–1.30  the dojo's name fades in over the sea of clouds
- *   0.80–3.60  the bluebird flies in from far away with the letter in its beak, and lets go
- *   3.60–4.80  the letter flies at you and fills the screen: a full envelope (app.js DELIVERY_MS = 4800)
- * After a tap (body.opened):
- *   0.00–0.40  the cinnabar seal is pressed and warms with a golden rim
- *   0.20–1.60  the gold clouds light up, spreading out from the seal; then they settle to a soft glow
- *   1.40–2.60  the top flap lifts away
- *   2.00–4.20  light pours out under the seal and along the seams; beams; the paper turns warm gold
- *   2.80–4.40  a bluebird flies out of the light
- *   4.00–4.60  the light fills the sky
- *   4.60–5.20  the sky fades onto the hanging scroll (app.js OPEN_MS = 5200)
- */
-.sky {
-  position: fixed;
-  z-index: 50;
-  inset: 0;
-  max-width: var(--col);
-  margin: 0 auto;
-  overflow: hidden;
-  container-type: size;
-  cursor: pointer;
-  outline: none;
-  background: #E6E3E0;
-  transition: opacity .6s ease 4.6s, visibility 0s linear 5.2s;
-}
-.opened .sky { opacity: 0; visibility: hidden; pointer-events: none; }
-
-.sky-box, .hero-box {
+/* ---- the invitation: a gold ring draws itself, the title inks in, a seal is stamped, the words follow ---- */
+.hero { position: relative; height: 100svh; min-height: 680px; overflow: hidden; }
+.hero-mist { position: absolute; left: -40%; right: -40%; bottom: -4%; height: 42%; background: url("art/mist-2.webp") center / 100% 100% no-repeat; opacity: 0; pointer-events: none; animation: sway 23s ease-in-out infinite alternate; }
+.open-a.opened .hero-mist, .open-c.opened .hero-mist { transition: opacity 3s ease calc(var(--c) + 2.6s); opacity: .45; }
+.hero-host { position: absolute; top: 7.5%; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: .9em; padding-left: .9em; color: var(--soft); opacity: 0; }
+.ring { position: absolute; left: 50%; top: 35%; width: 296px; height: 296px; translate: -50% -50%; }
+.ring svg { width: 100%; height: 100%; overflow: visible; rotate: -90deg; }
+.ring circle { fill: none; stroke: url(#foil); }
+.ring .outer { stroke-width: 2.2; stroke-dasharray: 930 930; stroke-dashoffset: 930; }
+.ring .inner { stroke-width: .8; stroke-dasharray: 880 880; stroke-dashoffset: 880; opacity: .7; }
+.tip { position: absolute; left: 50%; top: 50%; width: 0; height: 0; opacity: 0; }
+.tip::before, .tip::after { content: ""; position: absolute; left: 0; top: -148px; translate: -50% -50%; }
+.tip::before { width: 10px; height: 10px; border-radius: 50%; background: #FFFDF5; box-shadow: 0 0 8px 3px rgba(255, 236, 190, .95), 0 0 24px 8px rgba(236, 200, 120, .45); }
+.tip::after { width: 34px; height: 34px; background: conic-gradient(from 45deg, transparent 0 21deg, rgba(255, 250, 230, .95) 24deg, transparent 27deg 111deg, rgba(255, 250, 230, .95) 114deg, transparent 117deg 201deg, rgba(255, 250, 230, .95) 204deg, transparent 207deg 291deg, rgba(255, 250, 230, .95) 294deg, transparent 297deg); -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 70%); mask-image: radial-gradient(circle, #000 20%, transparent 70%); }
+/* the title: in vertical writing the spacing after the last character would push it up, so the top gets the same */
+.hero-title {
+  --n: 2;
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: max(100cqw, 100cqh * 9 / 16);
-  aspect-ratio: 9 / 16;
-  transform: translate(-50%, -50%);
-}
-.sky-art { position: absolute; inset: 0; background: url("art/sky.webp") center / cover no-repeat; }
-.art-heaven .sky-art { background-image: url("art/heaven.webp"); }
-.rays {
-  position: absolute;
-  left: -30%;
-  right: -30%;
-  top: -12%;
-  height: 70%;
-  background: url("art/rays.webp") center top / contain no-repeat;
-  mix-blend-mode: screen;
-  opacity: .45;
-  transform-origin: 50% 0;
-  animation: sway-rays 14s ease-in-out infinite alternate;
-  transition: opacity 1.2s ease .8s;
-}
-.opened .rays { opacity: .9; }
-@keyframes sway-rays { to { transform: rotate(4deg); } }
-
-.cloud {
-  position: absolute;
-  left: -20%;
-  width: 140%;
-  aspect-ratio: 3 / 2;
-  pointer-events: none;
-  background: center / contain no-repeat;
-  /* soften the cut edges of the cloud pictures */
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%, #000 62%, transparent 86%);
-  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 62%, transparent 86%);
-}
-.c1 { bottom: -14%; background-image: url("art/clouds.webp"); opacity: .9; animation: drift 38s ease-in-out infinite alternate; }
-.c2 { top: 34%; background-image: url("art/clouds-2.webp"); opacity: .55; animation: drift 46s ease-in-out infinite alternate-reverse; }
-.c3 { bottom: -12%; background-image: url("art/clouds.webp"); opacity: .8; animation: drift 40s ease-in-out infinite alternate; }
-@keyframes drift { from { translate: -6% 0; } to { translate: 6% 0; } }
-
-.sky-title {
-  position: absolute;
-  z-index: 2;
-  top: calc(8% + env(safe-area-inset-top));
-  left: 0;
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  color: var(--ink);
-  opacity: 0;
-  animation: fade-in 1s ease .3s forwards;
-}
-.sky-title span:first-child { font-family: var(--kai); font-size: 14px; letter-spacing: .6em; padding-left: .6em; color: var(--gold); }
-.sky-title span:last-child { font-family: var(--brush); font-size: 38px; letter-spacing: .3em; padding-left: .3em; }
-.opened .sky-title { opacity: 0; transition: opacity .5s ease; animation: none; }
-
-/* the bluebird: a 6 × 6 sheet of wing beats, 24 frames a second */
-.courier {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: 40%;
-  width: min(48cqw, 220px);
-  opacity: 0;
-  animation: fly 4.6s linear .8s forwards;
-  pointer-events: none;
-}
-@keyframes fly {
-  0% { transform: translate(-50%, -50%) translate(-95cqw, -24cqh) scale(.26); opacity: 0; animation-timing-function: cubic-bezier(.2, .4, .4, 1); }
-  10% { opacity: 1; }
-  60% { transform: translate(-50%, -50%) translate(-4cqw, 0) scale(1); opacity: 1; animation-timing-function: cubic-bezier(.5, 0, .8, .6); }
-  100% { transform: translate(-50%, -50%) translate(80cqw, -42cqh) scale(.4); opacity: 0; }
-}
-.bird {
-  position: relative;
-  aspect-ratio: 300 / 204;
-  background: url("art/bluebird.webp") 0 0 / 600% 600% no-repeat;
-  animation: flap-x .25s steps(6) infinite, flap-y 1.5s steps(6) infinite, bob 1.5s ease-in-out infinite;
-  filter: drop-shadow(0 6px 8px rgba(60, 70, 80, .18));
-}
-@keyframes flap-x { to { background-position-x: 120%; } }
-@keyframes flap-y { to { background-position-y: 120%; } }
-@keyframes bob { 50% { translate: 0 -5%; } }
-/* the letter, small, held in the beak until the bird lets go */
-.carried {
-  position: absolute;
-  left: 84%;
-  top: 46%;
-  width: 17%;
-  aspect-ratio: 9 / 16;
-  transform-origin: 50% 0;
-  background:
-    radial-gradient(circle at 50% 50%, var(--cinnabar) 0 9%, transparent 10%),
-    linear-gradient(to bottom right, transparent 49.5%, rgba(168, 132, 74, .55) 50%, transparent 51%),
-    linear-gradient(to bottom left, transparent 49.5%, rgba(168, 132, 74, .55) 50%, transparent 51%),
-    linear-gradient(170deg, #FBF8F2, #EDE6DA);
-  box-shadow: 0 2px 5px rgba(60, 50, 40, .3);
-  animation: dangle 1.5s ease-in-out infinite alternate, let-go 0s linear 3.6s forwards;
-}
-.art-envelope-back .carried {
-  background:
-    radial-gradient(circle at 50% 50%, var(--cinnabar) 0 9%, transparent 10%),
-    url("art/envelope-back.webp") center / cover no-repeat;
-}
-@keyframes dangle { from { rotate: -6deg; } to { rotate: 10deg; } }
-@keyframes let-go { to { visibility: hidden; } }
-
-/* the letter flies at you from the bird's beak and becomes a full envelope */
-.letter {
-  position: absolute;
-  z-index: 4;
-  inset: 0;
-  opacity: 0;
-  animation: arrive 1.2s cubic-bezier(.2, .6, .2, 1) 3.6s forwards;
-}
-@keyframes arrive {
-  0% { opacity: 1; transform: translate(14cqw, -14cqh) scale(.09) rotate(12deg); }
-  60% { opacity: 1; transform: translate(-1cqw, 1cqh) scale(1.03) rotate(-1.5deg); }
-  100% { opacity: 1; transform: none; }
-}
-.letter .env-box {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: max(100cqw, 100cqh * 9 / 16);
-  aspect-ratio: 9 / 16;
-  transform: translate(-50%, -50%);
-  perspective: 1500px;
-  perspective-origin: 50% 40%;
-}
-
-/* inside: a warm silk lining */
-.env-inside { position: absolute; inset: 0; background: radial-gradient(60% 40% at 50% 46%, #FFF1D6, #E9C9A0 55%, #C99F78); }
-.art-env-inside .env-inside { background: url("art/env-inside.webp") center / cover no-repeat; }
-
-/* every flap shows the same paper, so together they read as one sheet */
-.flap, .flap-top { position: absolute; inset: 0; }
-.sheet, .foil { position: absolute; inset: 0; }
-.sheet {
-  /* stand-in: ivory paper with a scatter of gold leaf */
-  background:
-    radial-gradient(circle at 20% 30%, rgba(201, 164, 98, .5) 0 1px, transparent 1.5px) 0 0 / 23px 31px,
-    radial-gradient(circle at 70% 60%, rgba(201, 164, 98, .4) 0 1px, transparent 1.5px) 0 0 / 29px 37px,
-    linear-gradient(170deg, #FBF8F2, #EFE8DC 70%, #E8E0D2);
-}
-.art-envelope-back .sheet { background: url("art/envelope-back.webp") center / cover no-repeat; }
-.fl-left { clip-path: polygon(0 0, 52% 50%, 0 100%); }
-.fl-right { clip-path: polygon(100% 0, 48% 50%, 100% 100%); }
-.fl-bottom { clip-path: polygon(0 100%, 50% 48%, 100% 100%); }
-.fl-left .sheet { filter: brightness(1.03); }
-.fl-right .sheet { filter: brightness(.93); }
-.fl-bottom .sheet { filter: brightness(.97); }
-
-/* the gold clouds light up, spreading out from the seal, then settle to a soft glow */
-@property --r { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
-.foil { opacity: 0; }
-.art-env-foil .foil { background: url("art/env-foil.webp") center / cover no-repeat; }
-.opened .foil {
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 var(--r), transparent calc(var(--r) + 16%));
-  mask-image: radial-gradient(circle at 50% 50%, #000 var(--r), transparent calc(var(--r) + 16%));
-  animation: ignite 1.4s cubic-bezier(.3, 0, .3, 1) .2s forwards, settle 2.6s ease 1.6s forwards;
-}
-/* the bloom: a blurred, brightened copy of the gold on top of it */
-.foil::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: inherit;
-  filter: blur(4px) brightness(2.2) saturate(1.6);
-  mix-blend-mode: screen;
-  opacity: 0;
-}
-.opened .foil::after { animation: bloom 2.6s ease .2s forwards; }
-@keyframes ignite { from { opacity: 1; --r: 0%; } to { opacity: 1; --r: 130%; } }
-@keyframes settle { 0% { opacity: 1; } 30% { opacity: .5; } 100% { opacity: .8; } }
-@keyframes bloom { 0% { opacity: 0; } 35% { opacity: 1; } 60% { opacity: .35; } 100% { opacity: .7; } }
-
-/* the top flap lifts toward you and folds away over the top */
-.top-shadow {
-  position: absolute;
-  inset: 0;
-  clip-path: polygon(0 0, 100% 0, 50% 53%);
-  background: rgba(80, 60, 30, .28);
-  filter: blur(5px);
-  transform: translateY(4px);
-  transition: opacity .8s ease 1.4s;
-}
-.opened .top-shadow { opacity: 0; }
-.flap-top { transform-origin: 50% 0; transform-style: preserve-3d; }
-.flap-top .face {
-  position: absolute;
-  inset: 0;
-  clip-path: polygon(0 0, 100% 0, 50% 51%);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-.flap-top .face.back { transform: rotateX(180deg); background: linear-gradient(0deg, #F3E2C6, #E0C49E); }
-.opened .flap-top { animation: flap-open 1.2s cubic-bezier(.45, 0, .3, 1) 1.4s both; }
-@keyframes flap-open {
-  0% { transform: none; }
-  75% { transform: rotateX(165deg); opacity: 1; }
-  100% { transform: rotateX(180deg); opacity: 0; }
-}
-
-/* gold seams along the folds; a second set glows when the light comes */
-.seams { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.seams path { fill: none; stroke: rgba(184, 148, 86, .7); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.seams.glowing { opacity: 0; filter: drop-shadow(0 0 4px #FFD88E) drop-shadow(0 0 10px rgba(255, 196, 110, .8)); }
-.seams.glowing path { stroke: #FFF1C9; stroke-width: 2; }
-.opened .seams.glowing { animation: glow-in 2.2s ease 2s forwards; }
-@keyframes glow-in { to { opacity: 1; } }
-
-/* light pours out under the seal: a bright core, beams, and a warm wash over the paper */
-.light { position: absolute; inset: 0; pointer-events: none; }
-/* a wave of golden light runs out from the seal as the clouds light up, and leaves the paper warm */
-.wave {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 196, 96, .5) calc(var(--r) - 22%), rgba(255, 176, 60, .95) var(--r), rgba(255, 176, 60, 0) calc(var(--r) + 12%));
-  mix-blend-mode: overlay;
-  opacity: 0;
-}
-.opened .wave { animation: ignite 1.4s cubic-bezier(.3, 0, .3, 1) .2s forwards, wave-settle 2.4s ease 1.6s forwards; }
-@keyframes wave-settle { to { opacity: .55; } }
-.warm {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(55% 40% at 50% 54%, rgba(255, 186, 96, .7), rgba(230, 140, 60, .3) 55%, rgba(120, 70, 30, .15) 85%);
-  mix-blend-mode: soft-light;
-  opacity: 0;
-}
-.opened .warm { animation: glow-in 2.2s ease 2.1s forwards; }
-.beams {
-  position: absolute;
-  left: 50%;
-  top: 56%;
-  width: 190%;
-  aspect-ratio: 1;
-  /* translate (not transform), so the slow turn spins around the centre of the light */
+  top: 35%;
   translate: -50% -50%;
-  background: repeating-conic-gradient(from 0deg, rgba(255, 232, 170, 0) 0deg 6deg, rgba(255, 232, 170, .5) 8deg, rgba(255, 232, 170, 0) 10deg 17deg);
-  -webkit-mask-image: radial-gradient(circle, #000 4%, rgba(0, 0, 0, .5) 22%, transparent 48%);
-  mask-image: radial-gradient(circle, #000 4%, rgba(0, 0, 0, .5) 22%, transparent 48%);
-  mix-blend-mode: screen;
-  opacity: 0;
-}
-.opened .beams { animation: glow-in 1.8s ease 2.4s forwards, turn 30s linear 2.4s infinite; }
-@keyframes turn { to { rotate: 360deg; } }
-.core {
-  position: absolute;
-  left: 50%;
-  top: 57%;
-  width: 22%;
-  height: 10%;
-  transform: translate(-50%, -50%) scale(.3);
-  border-radius: 40%;
-  background: radial-gradient(closest-side, #FFFEF6, #FFF0C8 55%, rgba(255, 214, 140, 0));
-  box-shadow: 0 0 40px 22px rgba(255, 224, 160, .85), 0 0 130px 70px rgba(255, 184, 96, .55);
-  filter: blur(7px);
-  opacity: 0;
-}
-.opened .core { animation: core-up 2.4s cubic-bezier(.3, 0, .2, 1) 2s forwards; }
-@keyframes core-up {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
-  40% { opacity: .9; }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(1.35); }
-}
-
-/* the name, on a label below the seal */
-.slip {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: calc(50% + min(15vw, 66px) + 2.5%);
-  padding: 1em .65em;
-  display: flex;
-  align-items: center;
-  transform: translateX(-50%);
   writing-mode: vertical-rl;
-  border: 1.5px solid var(--cinnabar);
-  outline: 1px solid rgba(168, 56, 58, .4);
-  outline-offset: 3px;
-  background: linear-gradient(180deg, #FBF8F1, #F2EBDD);
-  box-shadow: 0 3px 8px rgba(60, 50, 40, .18);
-  font-family: var(--kai);
-  color: var(--ink);
-  transition: opacity .6s ease 1.8s;
-}
-.l-to { font-size: min(6cqw, 25px); letter-spacing: .16em; line-height: 1; white-space: nowrap; }
-.l-sealed { margin-top: 1.2em; font-size: min(3.6cqw, 15px); letter-spacing: .3em; color: var(--soft); white-space: nowrap; }
-.opened .slip { opacity: 0; }
-
-/* the cinnabar seal where the flaps meet */
-.seal {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: 50%;
-  width: min(30vw, 132px);
-  aspect-ratio: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transform: translate(-50%, -50%);
-  border-radius: 47% 53% 50% 50% / 52% 48% 52% 48%;
-  /* stand-in: a cinnabar wax disc with a pressed rim */
-  background: radial-gradient(circle at 50% 50%, #B5413F 0 52%, #9E3333 56% 61%, #B3403D 65%, #8E2C2C 100%);
-  box-shadow: 0 6px 14px rgba(60, 20, 20, .35), inset 0 -3px 6px rgba(70, 10, 10, .3), inset 0 2px 4px rgba(255, 220, 210, .35);
-  color: #F6E3CF;
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: min(6.2vw, 27px);
-  line-height: 1.05;
-  text-shadow: 0 -1px 0 rgba(70, 10, 10, .45), 0 1px 0 rgba(255, 220, 200, .25);
-}
-.art-seal-red .seal { border-radius: 0; background: url("art/seal-red.webp") center / contain no-repeat; box-shadow: none; filter: drop-shadow(0 6px 10px rgba(60, 20, 20, .35)); }
-.seal b { font-weight: 900; }
-.opened .seal { animation: seal-warm 4s ease forwards; }
-@keyframes seal-warm {
-  0% { transform: translate(-50%, -50%); }
-  8% { transform: translate(-50%, -50%) scale(.95); }
-  16% { transform: translate(-50%, -50%) scale(1); filter: drop-shadow(0 0 0 rgba(255, 210, 130, 0)); }
-  60% { filter: drop-shadow(0 0 12px rgba(255, 214, 140, .9)); }
-  100% { transform: translate(-50%, -50%) scale(1.04); filter: drop-shadow(0 0 22px rgba(255, 226, 160, 1)); }
-}
-
-/* a bluebird flies up out of the light */
-.bird-out {
-  position: absolute;
-  z-index: 5;
-  left: 50%;
-  top: 56%;
-  width: min(44cqw, 200px);
+  font-weight: 600;
+  font-size: min(88px, calc(200px / var(--n)));
+  line-height: 1;
+  letter-spacing: .16em;
+  padding-top: .16em;
+  white-space: nowrap;
   opacity: 0;
-  pointer-events: none;
 }
-.opened .bird-out { animation: rise-out 1.6s cubic-bezier(.3, .1, .4, 1) 2.8s forwards; }
-@keyframes rise-out {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-25deg); }
-  20% { opacity: 1; }
-  100% { opacity: 1; transform: translate(-50%, -50%) translate(30cqw, -62cqh) scale(1.1) rotate(-30deg); }
+.stamp { position: absolute; left: calc(50% + 46px); top: calc(35% + 52px); width: 46px; height: 46px; opacity: 0; }
+.lines { position: absolute; top: 62%; left: 0; right: 0; display: flex; justify-content: center; }
+.vtext { position: relative; writing-mode: vertical-rl; height: 214px; font-size: 16px; line-height: 2.25; letter-spacing: .2em; }
+/* a hairline of gold foil beside the guest's line */
+.vtext::before { content: ""; position: absolute; top: 0; bottom: 0; right: -18px; width: 1.4px; background: url("art/gold-foil.webp") center / 400px; -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent); transform-origin: 50% 0; scale: 1 0; opacity: 0; }
+.vtext p { opacity: 0; translate: 0 10px; filter: blur(3px); }
+.vtext .v-guest {
+  font-size: 1.2em;
+  font-weight: 600;
+  background: linear-gradient(170deg, transparent 40%, rgba(255, 250, 232, .95) 50%, transparent 60%) 0 0 / 100% 300% no-repeat, url("art/gold-foil.webp") center / 300px;
+  background-position: 0 100%, center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-
-/* tap hint, once the letter has arrived */
-.tap {
-  position: absolute;
-  z-index: 5;
-  left: 0;
-  right: 0;
-  bottom: calc(3% + env(safe-area-inset-bottom));
-  text-align: center;
-  opacity: 0;
-  transition: opacity .8s ease .3s;
-  pointer-events: none;
-}
-.landed .tap { opacity: 1; }
-.opened .tap { opacity: 0; transition: opacity .25s ease; }
-.tap span {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 26px 12px calc(.5em + 26px);
-  font-size: 14px;
-  letter-spacing: .5em;
-  color: var(--ink);
-  background: radial-gradient(closest-side, rgba(251, 248, 242, .85), rgba(251, 248, 242, 0));
-}
-.tap span::before {
-  content: "";
-  width: 26px;
-  height: 26px;
-  margin-left: -.5em;
-  border: 1px solid var(--gold);
-  border-radius: 50%;
-  animation: ripple 2.6s ease-out infinite;
-}
-.sky:focus-visible .tap span::before { border-width: 2px; }
-@keyframes ripple { 0% { scale: .55; opacity: .95; } 100% { scale: 1.6; opacity: 0; } }
-@keyframes fade-in { to { opacity: 1; } }
-
-/* the light fills the sky */
-.burst {
-  position: absolute;
-  z-index: 6;
-  inset: -20%;
-  background: radial-gradient(circle at 50% 56%, #FFFDF6 0%, #FFF0CC 40%, #F7E2B4 80%);
-  opacity: 0;
-  transition: opacity .6s ease 4s;
-  pointer-events: none;
-}
-.opened .burst { opacity: 1; }
-
-/* ---------- the hanging scroll ---------- */
-.hero { min-height: 100svh; padding: calc(6svh + env(safe-area-inset-top)) 0 13svh; overflow: hidden; container-type: inline-size; }
-.hero-box { width: max(100%, 100svh * 9 / 16); height: auto; }
-.hero-art { position: absolute; inset: 0; background: url("art/sky.webp") center / cover no-repeat; }
-.art-yaochi .hero-art { background-image: url("art/yaochi.webp"); }
-
-.scroll { position: relative; z-index: 2; width: min(80%, 340px); margin: 0 auto; }
-.rod { display: block; position: relative; z-index: 2; background: center / 100% 100% no-repeat; filter: drop-shadow(0 4px 4px rgba(60, 50, 40, .25)); }
-.rod-top { width: 116%; margin-left: -8%; aspect-ratio: 900 / 297; background-image: url("art/scroll-top.webp"); }
-.rod-bottom { width: 112%; margin: -2% 0 0 -6%; aspect-ratio: 900 / 133; background-image: url("art/scroll-bottom.webp"); }
-/* the paper unrolls downward from the top rod */
-.paper {
-  display: grid;
-  justify-items: center;
-  align-content: start;
-  margin-top: -6%;
-  padding: 16% 13% 12%;
-  aspect-ratio: 800 / 1056;
-  overflow: hidden;
-  background: url("art/scroll-paper.webp") center / 100% 100% no-repeat;
-  box-shadow: 0 10px 24px rgba(60, 50, 40, .18);
-  clip-path: inset(0 0 100% 0);
-  transition: clip-path 1.6s cubic-bezier(.45, 0, .25, 1) .15s;
-}
-.revealed .paper { clip-path: inset(0 0 -2% 0); }
-.rod-bottom { transform: translateY(calc(-1 * min(80cqw, 340px) * 1056 / 800 + 6%)); transition: transform 1.6s cubic-bezier(.45, 0, .25, 1) .15s; }
-.revealed .rod-bottom { transform: none; }
-.plaque { width: 70%; height: auto; }
-.event { margin: 3% 0 4%; font-family: var(--brush); font-weight: 400; font-size: min(11cqw, 46px); letter-spacing: .3em; padding-left: .3em; line-height: 1.2; color: var(--ink); }
-.vtext {
-  writing-mode: vertical-rl;
-  height: 15.5em;
-  font-family: var(--kai);
-  font-size: min(4.2cqw, 17px);
-  line-height: 2.2;
-  letter-spacing: .14em;
-}
-.vtext p { margin-left: .3em; }
-#scroll-dates span { display: block; margin-left: .3em; }
-.v-guest { font-size: 1.15em; color: var(--ink); }
-.v-sign { padding-top: 6em; color: var(--soft); }
-/* the words appear after the paper has unrolled */
-.paper > *, .vtext p { opacity: 0; transition: opacity 1s ease; }
-.revealed .paper > *, .revealed .vtext p { opacity: 1; }
-.revealed:not(.hosting) .plaque { transition-delay: 1.1s; }
-.revealed:not(.hosting) .event { transition-delay: 1.4s; }
-.revealed:not(.hosting) .vtext { transition-delay: 1.6s; }
-.revealed:not(.hosting) .vtext p:nth-child(1) { transition-delay: 1.8s; }
-.revealed:not(.hosting) .vtext p:nth-child(2) { transition-delay: 2.1s; }
-.revealed:not(.hosting) .vtext p:nth-child(3) { transition-delay: 2.4s; }
-.revealed:not(.hosting) .vtext p:nth-child(4) { transition-delay: 2.7s; }
-.revealed:not(.hosting) .vtext p:nth-child(5) { transition-delay: 3s; }
-
-.scroll-hint {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  bottom: calc(3svh + env(safe-area-inset-bottom));
-  width: 36px;
-  height: 36px;
-  margin-left: -18px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(168, 132, 74, .6);
-  border-radius: 50%;
-  background: rgba(246, 243, 238, .7);
-  opacity: 0;
-  transition: opacity .8s ease 3.2s;
-}
-.revealed .scroll-hint { opacity: 1; }
-.scroll-hint svg { width: 18px; height: 18px; fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; animation: nudge 2.4s ease-in-out infinite; }
-.scroll-hint:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.vtext .v-sign { padding-top: 4em; color: var(--soft); }
+.scroll-hint { position: absolute; left: 0; right: 0; bottom: max(3%, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--soft); font-size: 11px; letter-spacing: .4em; padding-left: .4em; text-decoration: none; opacity: 0; }
+.scroll-hint svg { width: 18px; height: 18px; fill: none; stroke: var(--gold); stroke-width: 1.5; animation: nudge 2.4s ease-in-out infinite; }
 @keyframes nudge { 50% { translate: 0 4px; } }
 
-/* peach petals drifting down */
-.petals i {
-  position: absolute;
-  z-index: 3;
-  top: -20px;
-  left: var(--x, 20%);
-  width: 9px;
-  height: 7px;
-  border-radius: 60% 40% 60% 40%;
-  background: #F2C6C8;
-  opacity: .85;
-  animation: fall var(--d, 11s) linear var(--w, 0s) infinite;
-  pointer-events: none;
-}
-.petals i:nth-child(1) { --x: 12%; --d: 12s; --w: -2s; }
-.petals i:nth-child(2) { --x: 30%; --d: 14s; --w: -7s; }
-.petals i:nth-child(3) { --x: 48%; --d: 10s; --w: -4s; }
-.petals i:nth-child(4) { --x: 66%; --d: 13s; --w: -9s; }
-.petals i:nth-child(5) { --x: 80%; --d: 11s; --w: -1s; }
-.petals i:nth-child(6) { --x: 92%; --d: 15s; --w: -11s; }
-@keyframes fall {
-  0% { transform: translate(0, 0) rotate(0); }
-  50% { transform: translate(-30px, 55svh) rotate(200deg); }
-  100% { transform: translate(10px, 110svh) rotate(420deg); }
-}
+.opened .hero-host { transition: opacity 1.4s ease calc(var(--c) + 1.3s); opacity: 1; }
+.opened .ring .outer { transition: stroke-dashoffset 1.7s cubic-bezier(.55, 0, .2, 1) calc(var(--c) + 1.3s); stroke-dashoffset: 0; }
+.opened .ring .inner { transition: stroke-dashoffset 2s cubic-bezier(.55, 0, .2, 1) calc(var(--c) + 1.45s); stroke-dashoffset: 0; }
+.opened .tip { animation: tip 1.7s cubic-bezier(.55, 0, .2, 1) calc(var(--c) + 1.3s) forwards; }
+@keyframes tip { 0% { opacity: 0; rotate: 0deg; } 6% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; rotate: 360deg; } }
+.opened .hero-title { animation: ink-in 1.8s cubic-bezier(.2, .7, .2, 1) calc(var(--c) + 1.7s) forwards; }
+@keyframes ink-in { 0% { opacity: 0; filter: blur(16px); letter-spacing: .34em; padding-top: .34em; } 100% { opacity: 1; filter: blur(0); letter-spacing: .16em; padding-top: .16em; } }
+.opened .stamp { animation: stamp-in .5s cubic-bezier(.2, .8, .2, 1) calc(var(--c) + 2.8s) forwards; }
+.opened .stamp i { animation: ink-take .34s steps(7, end) calc(var(--c) + 2.8s) forwards; }
+.opened .stamp::before { animation: dent .8s ease-out calc(var(--c) + 2.9s); }
+.opened .vtext::before { transition: scale 1.1s cubic-bezier(.4, 0, .2, 1) calc(var(--c) + 3s), opacity .4s ease calc(var(--c) + 3s); scale: 1 1; opacity: 1; }
+.opened .vtext p { transition: opacity 1s ease, translate 1s ease, filter 1s ease; transition-delay: calc(var(--c) + 3.1s + var(--i, 0) * .2s); opacity: 1; translate: 0 0; filter: blur(0); }
+.opened .vtext .v-guest { animation: guest-shine 1.6s ease-in-out calc(var(--c) + 4.4s) forwards; }
+@keyframes guest-shine { to { background-position: 0 0, center; } }
+.opened .scroll-hint { transition: opacity 1.2s ease calc(var(--c) + 5s); opacity: 1; }
 
-/* ---------- reveal on scroll ---------- */
-[data-reveal] {
-  opacity: 0;
-  transform: translateY(18px);
-  filter: blur(5px);
-  transition: opacity 1.1s var(--ease), transform 1.1s var(--ease), filter 1.1s var(--ease);
+/* ---- the sections below ---- */
+.sec, .foot { position: relative; padding: 64px 28px; text-align: center; }
+.title { font-size: 19px; font-weight: 600; letter-spacing: .5em; padding-left: .5em; }
+.title::after { content: ""; display: block; width: 44px; height: 1.4px; margin: 16px auto 26px; background: url("art/gold-foil.webp") center / 300px; }
+.dates { list-style: none; margin: 0; padding: 0; font-size: 22px; letter-spacing: .12em; }
+.time-line { margin-top: 8px; color: var(--soft); letter-spacing: .2em; }
+.clock { display: flex; justify-content: center; gap: 10px; }
+.clock p { width: 70px; padding: 12px 0 8px; border: 1px solid var(--line); border-radius: 3px; background: rgba(255, 255, 255, .35); }
+.clock span {
+  display: block;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+  background: url("art/gold-foil.webp") center / 220px;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-[data-reveal].in { opacity: 1; transform: none; filter: none; }
-
-/* ---------- dates, countdown, place ---------- */
-.dates { display: flex; justify-content: center; gap: 14px; margin: 24px 0 0; padding: 0; list-style: none; }
-.dates li {
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  outline: 1px solid rgba(211, 198, 178, .5);
-  outline-offset: 3px;
-  background: var(--paper-hi);
-  font-family: var(--serif);
-  font-size: 17px;
-  letter-spacing: .08em;
-}
-.time-line { margin-top: 16px; font-size: 15px; letter-spacing: .2em; color: var(--soft); }
-
-.countdown { padding-top: 30px; }
-.clock { display: flex; justify-content: center; gap: 14px; margin-top: 22px; }
-.clock p { min-width: 58px; }
-.clock span { display: block; font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1.1; color: var(--gold); font-variant-numeric: lining-nums tabular-nums; }
-.clock small { font-size: 13px; letter-spacing: .1em; color: var(--soft); }
-.countdown-note { margin-top: 20px; font-size: 17px; letter-spacing: .14em; }
-
-.venue-name { margin-top: 18px; font-family: var(--brush); font-size: 32px; letter-spacing: .2em; padding-left: .2em; }
-.venue-address { margin-top: 6px; font-size: 15px; letter-spacing: .08em; color: var(--soft); }
+.clock small { font-size: 12px; color: var(--soft); letter-spacing: .3em; padding-left: .3em; }
+.countdown-note { font-size: 18px; letter-spacing: .12em; }
+.venue-name { font-size: 22px; letter-spacing: .2em; }
+.venue-address { margin: 6px 0 22px; color: var(--soft); }
 .btn {
   display: inline-block;
-  margin-top: 18px;
-  padding: 9px 24px;
+  padding: 10px 28px;
   border: 1px solid var(--gold);
   border-radius: 999px;
-  background: var(--paper-hi);
   color: var(--ink);
-  font-size: 14px;
-  letter-spacing: .3em;
   text-decoration: none;
+  letter-spacing: .3em;
+  padding-left: calc(28px + .3em);
+  background: rgba(255, 255, 255, .35);
 }
-.btn.ghost { background: transparent; }
-.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-
-/* ---------- program ---------- */
-.program { overflow: hidden; }
-.peach-branch { position: absolute; top: 0; right: -6%; width: 46%; aspect-ratio: 3 / 2; pointer-events: none; }
-.art-peach-branch .peach-branch { background: url("art/peach-branch.webp") right top / contain no-repeat; }
-.program-note { margin-top: 18px; font-size: 16px; letter-spacing: .3em; color: var(--soft); }
-.p-block { max-width: 320px; margin: 24px auto 0; text-align: left; }
-.p-day { padding-bottom: 6px; border-bottom: 1px solid var(--line); font-family: var(--serif); font-weight: 600; font-size: 15px; letter-spacing: .14em; color: var(--gold); }
-.p-list { margin: 8px 0 0; padding: 0; list-style: none; }
-.p-item { display: flex; gap: 14px; padding: 7px 0; font-size: 16px; }
-.p-time { flex: none; min-width: 52px; font-family: var(--serif); color: var(--soft); font-variant-numeric: lining-nums; }
-
-/* ---------- deities ---------- */
-.deities { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 10px; max-width: 360px; margin: 26px auto 0; padding: 0; list-style: none; }
-.deity { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 12px; border: 1px solid var(--line); background: rgba(246, 243, 238, .6); }
+.btn.ghost { border-color: var(--line); color: var(--soft); }
+.program-note { color: var(--soft); letter-spacing: .2em; }
+.p-block + .p-block { margin-top: 26px; }
+.p-day { font-size: 16px; font-weight: 600; letter-spacing: .2em; margin-bottom: 8px; }
+.p-list { list-style: none; margin: 0 auto; padding: 0; max-width: 300px; text-align: left; }
+.p-item { display: flex; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.p-time { color: var(--gold); font-variant-numeric: tabular-nums; }
+.deities { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px 10px; align-items: end; }
+.deity { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .deity.main { grid-column: 1 / -1; }
-.d-img { width: 100%; height: 84px; object-fit: contain; }
-.deity.main .d-img { height: 120px; }
-.d-role { margin-top: 6px; font-size: 12px; letter-spacing: .4em; padding-left: .4em; color: var(--gold); }
-.d-name { font-family: var(--brush); font-size: 17px; letter-spacing: .02em; white-space: nowrap; }
-.deity.main .d-name { font-size: 24px; letter-spacing: .2em; }
+/* each picture is a cut-out emblem, all the same height: show it whole */
+.d-img { height: 110px; width: auto; max-width: 100%; object-fit: contain; margin-bottom: 6px; }
+.deity.main .d-img { height: 150px; }
+.d-role { font-size: 12px; color: var(--gold); letter-spacing: .3em; padding-left: .3em; }
+.d-name { font-size: 17px; letter-spacing: .2em; padding-left: .2em; }
+.foot { padding-bottom: 80px; }
+.foot-seal { width: 64px; height: 64px; margin: 0 auto 18px; background: url("art/seal.webp") center / contain no-repeat; mix-blend-mode: multiply; }
+.foot-sign { font-size: 18px; letter-spacing: .3em; padding-left: .3em; margin-bottom: 24px; }
 
-/* ---------- footer ---------- */
-.foot { padding: 0 24px calc(40px + env(safe-area-inset-bottom)); }
-.lotus-pond { margin: 0 -24px 14px; aspect-ratio: 3 / 2; background: url("art/lotus.webp") center 70% / 34% auto no-repeat; }
-.art-lotus-pond .lotus-pond { background: url("art/lotus-pond.webp") center / 100% auto no-repeat; }
-.foot-sign { font-family: var(--brush); font-size: 26px; letter-spacing: .24em; padding-left: .24em; }
-.credit { margin-top: 26px; font-family: var(--serif); font-size: 11px; line-height: 1.6; color: var(--soft); }
+/* sections come in gently as they scroll into view */
+[data-reveal] { opacity: 0; translate: 0 14px; transition: opacity 1s var(--ease), translate 1s var(--ease); }
+[data-reveal].in { opacity: 1; translate: 0 0; }
 
-/* ---------- host link maker ---------- */
-.host {
-  position: relative;
-  z-index: 70;
-  max-width: var(--col);
-  margin: 0 auto;
-  padding: 40px 22px 26px;
-  background: #FFF;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--serif);
-  text-align: left;
-}
-.host h2 { font-size: 18px; }
-.host-lead, .host-note { margin-top: 6px; font-size: 13px; line-height: 1.7; color: var(--soft); }
-.host textarea {
-  width: 100%;
-  margin-top: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--paper-hi);
-  font: inherit;
-  font-size: 15px;
-  line-height: 1.7;
-  resize: vertical;
-}
-.host-row { display: flex; gap: 10px; margin-top: 10px; }
-.host button {
-  padding: 9px 18px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--paper-hi);
-  font-size: 14px;
-  cursor: pointer;
-}
-.host button.ghost { border: 1px solid var(--line); background: transparent; color: var(--ink); }
-.host button:focus-visible, .host textarea:focus-visible, .host input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-#host-links { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
-#host-links li { display: flex; align-items: center; gap: 8px; }
-#host-links .who { flex: none; min-width: 90px; font-size: 14px; }
-#host-links input {
-  flex: 1;
-  min-width: 0;
-  padding: 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper-hi);
-  color: var(--soft);
-  font-size: 12px;
-}
+/* ================= host: the link maker (?host) ================= */
+.host { position: relative; z-index: 12; max-width: var(--col); margin: 0 auto; padding: 28px 22px 34px; background: #FFFDF8; border-bottom: 1px solid var(--line); line-height: 1.6; }
+.host h2 { font-size: 20px; letter-spacing: .1em; margin-bottom: 8px; }
+.host-lead, .host-note { font-size: 14px; color: var(--soft); }
+.host-note { margin-top: 12px; }
+.field { display: block; margin-top: 14px; font-size: 14px; }
+.field > span { display: block; margin-bottom: 4px; color: var(--soft); }
+.field input, .field select, .field textarea, .link-row input, #host-links input { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 15px; }
+.words { margin: 18px 0 0; padding: 4px 14px 14px; border: 1px solid var(--line); border-radius: 8px; }
+.words legend { padding: 0 6px; font-size: 14px; }
+.host button, .btn-s { padding: 9px 16px; border: 1px solid var(--gold); border-radius: 999px; background: var(--ink); color: #fff; cursor: pointer; font-size: 14px; white-space: nowrap; text-decoration: none; }
+.host .ghost, .btn-s.ghost { background: #fff; color: var(--ink); border-color: var(--line); }
+#host-reset { margin-top: 12px; }
+.host-row { display: flex; gap: 10px; margin-top: 16px; }
+.general { margin-top: 18px; font-size: 14px; color: var(--soft); }
+.link-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+#host-links { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+#host-links li { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 8px; align-items: center; }
+#host-links .who { grid-column: 1 / -1; font-weight: 600; }
+.hosting .hero { height: 760px; }
 
-/* ---------- reduced motion ---------- */
+/* ================= less motion: everything is simply there ================= */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation: none !important;
-    transition-duration: .01ms !important;
-    transition-delay: 0s !important;
-  }
-  .courier { display: none; }
-  .letter { opacity: 1; transform: none; }
-  [data-reveal], .paper > *, .vtext p { opacity: 1; transform: none; filter: none; }
-  .paper { clip-path: none; }
-  .rod-bottom { transform: none; }
-  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .mover, .ready .mover { opacity: 1; transform: none; }
+  .seal, .seal i, .tag, .hint { opacity: 1; }
+  .seal i { background-position: 100% 0; }
+  .hero-host, .hero-title, .stamp, .scroll-hint { opacity: 1; filter: none; }
+  .vtext p, [data-reveal] { opacity: 1; filter: none; translate: none; }
+  .stamp i { background-position: 100% 0; }
+  .vtext::before { opacity: 1; scale: 1 1; }
+  .ring circle { stroke-dashoffset: 0; }
 }

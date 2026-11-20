@@ -1,68 +1,65 @@
-"""把 src/art/ 裡 AI 畫的大圖，縮小壓成網頁用的 webp，放到 ../art/。
+"""把 src/art/paper/ 裡挑好的原圖，縮小壓成網頁用的 webp，放到 ../art/。
 
 用法（在 repo 最上層）：
 
     python cihui-invite/src/compress_art.py
 
 原圖很大、不放上 GitHub；網頁只讀 art/ 裡壓過的 webp。
+先跑 seal.py（做印章）和 flake_sprites.py（切金箔），它們的輸出也在 src/art/paper/。
 """
 
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
-SRC = HERE / "art"
+SRC = HERE / "art" / "paper"
 OUT = HERE.parent / "art"
 
-# 檔名開頭 → 最長邊幾 px。沒列到的用 DEFAULT。
-SIZES = {
-    "heaven": 1920,
-    "letter": 1600,
-    "yaochi": 1920,
-    "cloud-band": 1200,
-    "peach-branch": 900,
-    "lotus-pond": 1200,
-    "envelope-back": 1920,
-    "env-foil": 1440,
-    "env-inside": 1280,
-    "seal-red": 600,
+
+def lighten_mist(img: Image.Image) -> Image.Image:
+    """The mist's faint edges came out grey, which reads as a smudge on ivory: keep how see-through it is,
+    but move its colour most of the way to white."""
+    a = np.asarray(img.convert("RGBA")).astype(float)
+    rgb = 255 - (255 - a[..., :3]) * 0.3
+    return Image.fromarray(np.dstack([rgb, a[..., 3]]).clip(0, 255).astype(np.uint8), "RGBA")
+
+
+# web name: (source picture, (max width, max height), quality, extra step)
+PICKS = {
+    "cloud-front": ("cloud-front-v2-cut.png", (1024, 2304), 84, None),
+    "cloud-mid": ("cloud-mid-v1-cut.png", (1024, 2304), 82, None),
+    "cloud-back": ("cloud-back-v3-cut.png", (1024, 2304), 82, None),
+    "paper": ("paper-ivory-v1.png", (1080, 1920), 78, None),
+    "gold-foil": ("gold-foil-v1.png", (600, 600), 82, None),
+    "gold-flakes": ("gold-flakes-sprites.png", (1024, 384), 86, None),
+    "seal-ink": ("seal-cihui-ink.png", (2304, 288), 86, None),
+    "seal-slip": ("seal-slip.png", (512, 512), 86, None),
+    "seal": ("seal-cihui.png", (384, 384), 86, None),
+    "mist-1": ("mist-v1-cut.png", (1400, 700), 80, lighten_mist),
+    "mist-2": ("mist-v2-cut.png", (1400, 700), 80, lighten_mist),
+    "mist-3": ("mist-v3-cut.png", (1400, 700), 80, lighten_mist),
 }
-DEFAULT = 1200
-QUALITY = 80
 
 
-def longest_side(name: str) -> int:
-    for prefix, size in SIZES.items():
-        if name.startswith(prefix):
-            return size
-    return DEFAULT
-
-
-def trim(img: Image.Image) -> Image.Image:
-    """See-through pictures: cut away the empty border so CSS 'contain' sizes the drawing itself."""
-    box = img.getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()
-    return img.crop(box) if box else img
-
-
-def compress(path: Path) -> Path:
-    img = Image.open(path)
-    img = trim(img.convert("RGBA")) if "A" in img.getbands() else img.convert("RGB")
-    img.thumbnail((longest_side(path.stem),) * 2, Image.LANCZOS)
-    out = OUT / f"{path.stem}.webp"
-    img.save(out, "WEBP", quality=QUALITY, method=6)
+def compress(name: str, source: str, box: tuple[int, int], quality: int, step) -> Path:
+    img = Image.open(SRC / source)
+    img = img.convert("RGBA") if "A" in img.getbands() else img.convert("RGB")
+    if step:
+        img = step(img)
+    img.thumbnail(box, Image.LANCZOS)
+    out = OUT / f"{name}.webp"
+    img.save(out, "WEBP", quality=quality, method=6)
     return out
 
 
 def main() -> None:
     OUT.mkdir(exist_ok=True)
-    sources = sorted(p for p in SRC.iterdir() if p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"})
-    if not sources:
-        print("src/art/ 裡沒有圖")
-        return
-    for path in sources:
-        out = compress(path)
-        print(f"{path.name} -> art/{out.name}  {out.stat().st_size // 1024} KB")
+    for name, (source, box, quality, step) in PICKS.items():
+        out = compress(name, source, box, quality, step)
+        size = Image.open(out).size
+        print(f"{source} -> art/{out.name}  {size[0]}x{size[1]}  {out.stat().st_size // 1024} KB")
 
 
 if __name__ == "__main__":

@@ -5,106 +5,117 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>慈惠道場 · 堂慶邀請函</title>
-<meta name="theme-color" content="#ECE8E3">
+<meta name="theme-color" content="#F7F3EA">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Yuji+Boku&family=LXGW+WenKai+TC:wght@400&display=swap">
-<link rel="preload" as="image" href="art/bluebird.webp">
+<!-- the font loads in the background, so the clouds can show straight away -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&display=swap"></noscript>
+<link rel="preload" as="image" href="art/cloud-front.webp">
+<link rel="preload" as="image" href="art/cloud-mid.webp">
+<link rel="preload" as="image" href="art/cloud-back.webp">
+<link rel="preload" as="image" href="art/paper.webp">
 <link rel="stylesheet" href="style.css">
 <script src="content.js"></script>
 <script src="app.js" defer></script>
 </head>
 <body class="sealed">
 
+<svg class="defs" width="0" height="0" aria-hidden="true">
+  <defs>
+    <pattern id="foil" patternUnits="userSpaceOnUse" width="300" height="300"><image href="art/gold-foil.webp" width="300" height="300"/></pattern>
+  </defs>
+</svg>
+
 <!-- host only: personal link maker (?host) -->
 <section id="host" class="host" hidden>
   <h2 data-t="hostTitle"></h2>
   <p class="host-lead" data-t="hostLead"></p>
-  <textarea id="host-names" rows="5"></textarea>
+  <label class="field">
+    <span data-t="hostOpen"></span>
+    <select id="host-open">
+      <option value="c" data-t="hostOpenC"></option>
+      <option value="a" data-t="hostOpenA"></option>
+      <option value="b" data-t="hostOpenB"></option>
+    </select>
+  </label>
+  <fieldset class="words">
+    <legend data-t="hostWords"></legend>
+    <label class="field"><span data-t="hostTitleLabel"></span><input id="host-title" maxlength="6"></label>
+    <label class="field"><span data-t="hostMsgLabel"></span><textarea id="host-msg" rows="4"></textarea></label>
+    <label class="field"><span data-t="hostSignLabel"></span><input id="host-sign" maxlength="20"></label>
+    <button type="button" id="host-reset" class="ghost" data-t="hostReset"></button>
+  </fieldset>
+  <label class="field"><span data-t="hostNamesLabel"></span><textarea id="host-names" rows="5"></textarea></label>
   <div class="host-row">
     <button type="button" id="host-make" data-t="hostMake"></button>
     <button type="button" id="host-copy-all" class="ghost" data-t="hostCopyAll"></button>
+  </div>
+  <div class="general">
+    <span data-t="hostGeneral"></span>
+    <div class="link-row"><input id="host-general" readonly><button type="button" id="host-general-copy" class="ghost" data-t="hostCopy"></button><a id="host-general-open" class="ghost btn-s" target="_blank" rel="noopener" data-t="hostPreview"></a></div>
   </div>
   <ul id="host-links"></ul>
   <p class="host-note" data-t="hostNote"></p>
 </section>
 
-<!-- the sky: a bluebird, the Queen Mother's messenger, brings the letter -->
+<!-- the opening: paper clouds closed over a seal; tap to open (a layer over the page) -->
 <div id="sky" class="sky" role="button" tabindex="0">
-  <div class="sky-box">
-    <div class="sky-art" aria-hidden="true"></div>
-    <i class="rays" aria-hidden="true"></i>
-    <i class="cloud c1" aria-hidden="true"></i><i class="cloud c2" aria-hidden="true"></i>
+  <div class="glow" aria-hidden="true"></div>
+  <div class="disk" aria-hidden="true"></div>
+  <div class="clouds" aria-hidden="true">
+    <div class="side L back"><div class="mover"><img src="art/cloud-back.webp" alt=""></div></div>
+    <div class="side R back"><div class="mover"><img src="art/cloud-back.webp" alt=""></div></div>
+    <div class="side R mid"><div class="mover"><img src="art/cloud-mid.webp" alt=""></div></div>
+    <div class="side L mid"><div class="mover"><img src="art/cloud-mid.webp" alt=""></div></div>
+    <div class="side L front"><div class="mover"><img src="art/cloud-front.webp" alt=""></div></div>
+    <div class="side R front"><div class="mover"><img src="art/cloud-front.webp" alt=""></div></div>
   </div>
-  <p class="sky-title" aria-hidden="true"><span>慈惠道場</span><span>堂慶</span></p>
-
-  <div class="courier" aria-hidden="true">
-    <div class="bird"><i class="carried"></i></div>
-  </div>
-
-  <!-- the letter: once the bird lets go, it flies at you and fills the screen -->
-  <div id="letter" class="letter">
-    <div class="env-box" aria-hidden="true">
-      <div class="env-inside"></div>
-      <div class="flap fl-left"><i class="sheet"></i><i class="foil"></i></div>
-      <div class="flap fl-right"><i class="sheet"></i><i class="foil"></i></div>
-      <div class="flap fl-bottom"><i class="sheet"></i><i class="foil"></i></div>
-      <div class="top-shadow"></div>
-      <div class="flap-top">
-        <i class="face front"><i class="sheet"></i><i class="foil"></i></i>
-        <i class="face back"></i>
-      </div>
-      <svg class="seams" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0 L50 50 L100 0 M0 100 L50 50 L100 100"/></svg>
-      <svg class="seams glowing" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 100 L50 50 L100 100 M0 0 L50 50 L100 0"/></svg>
-      <div class="light"><i class="wave"></i><i class="warm"></i><i class="beams"></i><i class="core"></i></div>
-    </div>
-    <!-- the name, on a label pasted below the seal -->
-    <div class="slip"><span id="letter-to" class="l-to"></span><span class="l-sealed" data-t="sealed"></span></div>
-    <span class="seal" aria-hidden="true"><b>慈</b>
-<b>惠</b></span>
-  </div>
-
-  <!-- a bluebird flies out of the light -->
-  <div class="bird-out" aria-hidden="true"><div class="bird"></div></div>
-
-  <p class="tap"><span data-t="tapToOpen"></span></p>
-  <i class="burst" aria-hidden="true"></i>
+  <i class="ripple" aria-hidden="true"></i>
+  <div class="seal" role="img"><b></b><i></i></div>
+  <p class="tag"><span id="tag-to"></span> <small data-t="sealed"></small></p>
+  <p class="hint"><span data-t="tapToOpen"></span></p>
+  <i class="sheen" aria-hidden="true"></i>
+  <i class="bloom" aria-hidden="true"></i>
+  <i class="mist m3" aria-hidden="true"></i>
+  <i class="mist m1" aria-hidden="true"></i>
+  <i class="mist m2" aria-hidden="true"></i>
+  <div class="spell" aria-hidden="true"><svg viewBox="0 0 200 200"><circle class="c" cx="100" cy="100" r="100"/><circle class="a" cx="100" cy="100" r="100"/><circle class="b" cx="100" cy="100" r="92"/></svg></div>
 </div>
+
+<!-- gold leaf and sparkles, over everything, never in the way -->
+<canvas id="gold" class="gold" aria-hidden="true"></canvas>
 
 <main id="main" class="page" tabindex="-1">
 
-  <!-- the hanging scroll on the Jade Pool -->
+  <!-- the invitation -->
   <section class="hero">
-    <div class="hero-box" aria-hidden="true"><div class="hero-art"></div><i class="cloud c3"></i></div>
-    <div class="petals" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="scroll">
-      <i class="rod rod-top" aria-hidden="true"></i>
-      <div class="paper">
-        <img class="plaque" src="art/plaque.webp" alt="慈惠道場">
-        <h1 class="event">堂 慶</h1>
-        <div class="vtext">
-          <p id="scroll-guest" class="v-guest"></p>
-          <p id="scroll-dates"></p>
-          <p data-t="holding"></p>
-          <p data-t="welcome"></p>
-          <p class="v-sign" data-t="signature"></p>
-        </div>
-      </div>
-      <i class="rod rod-bottom" aria-hidden="true"></i>
+    <i class="hero-mist" aria-hidden="true"></i>
+    <p id="hero-host" class="hero-host"></p>
+    <div class="ring" aria-hidden="true">
+      <svg viewBox="0 0 296 296"><circle class="outer" cx="148" cy="148" r="148"/><circle class="inner" cx="148" cy="148" r="140"/></svg>
+      <i class="tip"></i>
     </div>
-    <a class="scroll-hint" href="#when" aria-label="往下看"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
+    <h1 id="hero-title" class="hero-title"></h1>
+    <div class="stamp" role="img"><i></i></div>
+    <div class="lines">
+      <div id="hero-text" class="vtext">
+        <p id="hero-guest" class="v-guest"></p>
+        <p id="hero-sign" class="v-sign"></p>
+      </div>
+    </div>
+    <a class="scroll-hint" href="#when"><span data-t="scroll"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
   </section>
 
   <!-- when -->
-  <section id="when" class="when">
-    <div class="cloud-band" aria-hidden="true" data-reveal></div>
+  <section id="when" class="sec">
     <h2 class="title" data-t="datesTitle" data-reveal></h2>
     <ul id="dates" class="dates" data-reveal></ul>
     <p id="time-line" class="time-line" data-reveal></p>
   </section>
 
   <!-- countdown -->
-  <section class="countdown">
+  <section class="sec">
     <h2 class="title" data-t="countdownTitle" data-reveal></h2>
     <div id="countdown-clock" class="clock" hidden data-reveal>
       <p><span id="cd-days">0</span><small data-t="days"></small></p>
@@ -116,8 +127,7 @@
   </section>
 
   <!-- place -->
-  <section class="place">
-    <div class="cloud-band" aria-hidden="true" data-reveal></div>
+  <section class="sec">
     <h2 class="title" data-t="placeTitle" data-reveal></h2>
     <p id="venue-name" class="venue-name" data-reveal></p>
     <p id="venue-address" class="venue-address" data-reveal></p>
@@ -125,26 +135,23 @@
   </section>
 
   <!-- program -->
-  <section class="program">
-    <i class="peach-branch" aria-hidden="true"></i>
+  <section class="sec">
     <h2 class="title" data-t="programTitle" data-reveal></h2>
     <p id="program-note" class="program-note" data-reveal></p>
     <div id="program"></div>
   </section>
 
   <!-- the deities of the dojo -->
-  <section class="deities-sec">
-    <div class="cloud-band" aria-hidden="true" data-reveal></div>
+  <section class="sec">
     <h2 class="title" data-t="deitiesTitle" data-reveal></h2>
     <ul id="deities" class="deities"></ul>
   </section>
 
   <!-- footer -->
   <footer class="foot">
-    <div class="lotus-pond" aria-hidden="true"></div>
+    <div class="foot-seal" role="img" data-reveal></div>
     <p class="foot-sign" data-t="signature" data-reveal></p>
     <a id="site-link" class="btn ghost" target="_blank" rel="noopener" data-t="siteLink" data-reveal></a>
-    <p id="credit" class="credit" data-t="credit"></p>
   </footer>
 </main>
 
