@@ -18,9 +18,9 @@ window.BDAY_CONTENT = {
     address: null,
   },
 
-  // 想對 Dodo 說的話：一個字串是一段。【請換成你自己的話】
+  // 想對 Dodo 說的話：一個字串是一段。【請換成自己的話】
   letter: [
-    '（這裡放你想對 Dodo 說的話。）',
+    '（這裡放想對 Dodo 說的話。）',
     '（可以寫好幾段，一段放一行，用引號包起來，後面加逗號。）',
   ],
 
@@ -31,16 +31,16 @@ window.BDAY_CONTENT = {
     happyBirthday: 'Happy Birthday',
     scroll: '往下看',
     inviteTitle: 'To Dodo',
-    inviteLine: '想請你一起吃一頓生日晚餐',
+    inviteLine: '想請妳一起吃一頓生日晚餐',
     countdownTitle: '生日倒數',
-    countdownPast: '生日快樂！謝謝你來',
+    countdownPast: '生日快樂！謝謝妳來',
     days: '天',
     hours: '時',
     minutes: '分',
     seconds: '秒',
     placeTitle: '地點',
     map: '查看地圖',
-    letterTitle: '想對你說的話',
-    footer: '12 月 12 日，等你來',
+    letterTitle: '想對妳說的話',
+    footer: '12 月 12 日，等妳來',
   },
 };

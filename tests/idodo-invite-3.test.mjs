@@ -76,9 +76,14 @@ test('4. before the dinner it counts down; after, it thanks Dodo', async () => {
   ahead.window.close();
   const done = await open('', (c) => ({ ...c, date: '2020-12-12T18:30:00+08:00' }));
   assert.ok(done.window.document.querySelector('#countdown-clock').hidden);
-  assert.equal(text(done.window.document, '#countdown-note'), '生日快樂！謝謝你來');
+  assert.equal(text(done.window.document, '#countdown-note'), '生日快樂！謝謝妳來');
   done.window.close();
 });
+
+test('4. the card speaks to Dodo as 妳, never 你', withDom('', undefined, (win, doc) => {
+  assert.doesNotMatch(doc.body.textContent, /你/);
+  assert.match(text(doc, '.invite-line'), /妳/);
+}));
 
 // 5. place
 test('5. the place is Terzo in 竹北, and the map button finds it', withDom('', undefined, (win, doc) => {
